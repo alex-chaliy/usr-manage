@@ -1,46 +1,82 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { data } from '../../data/mock_data';
-import { User, UserSortField } from '../models/User.model';
+import { User, UserSortField, UserTableRow } from '../models/User.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
-  userList: User[] = data.users as User[];
+  private readonly positionMap = new Map(
+    data.positions.map((position) => [position.id, position.name]),
+  );
+  private readonly levelMap = new Map(data.levels.map((level) => [level.id, level.name]));
+  private readonly techMap = new Map(data.tech.map((tech) => [tech.id, tech.name]));
+  private readonly employmentTypeMap = new Map(
+    data.employmentTypes.map((employmentType) => [employmentType.id, employmentType.name]),
+  );
 
-  getUsers(): Observable<User[]> {
+  userList: UserTableRow[] = this.mapUsersData(data.users as User[]);
+
+  private mapUsersData(users: User[]): UserTableRow[] {
+    return users.map((user) => ({
+      fullName: `${user.firstName} ${user.lastName}`,
+      email: user.email,
+      position: this.positionMap.get(user.positionId) ?? 'Unknown',
+      level: this.levelMap.get(user.levelId) ?? 'Unknown',
+      primaryTech: this.techMap.get(user.primaryTechId) ?? 'Unknown',
+      employmentType: this.employmentTypeMap.get(user.employmentTypeId) ?? 'Unknown',
+      age: user.age,
+      salaryMonthly: user.salaryMonthly,
+    }));
+  }
+
+  getUsers(): Observable<UserTableRow[]> {
     return of(this.userList);
   }
 
-  searchUsersByName(name: string): Observable<User[]> {
-    this.userList = this.userList.filter((u) => u.firstName === name || u.lastName === name);
+  searchUsersByFullName(fullName: string): Observable<UserTableRow[]> {
+    const query = fullName.trim().toLowerCase();
+    this.userList = this.userList.filter((u) => {
+      const fullNameValue = (u.fullName || '').toLowerCase();
+      return !query || fullNameValue.includes(query);
+    });
     return of(this.userList);
   }
 
-  searchUsersByEmail(email: string): Observable<User[]> {
-    this.userList = this.userList.filter((u) => u.email === email);
+  searchUsersByEmail(email: string): Observable<UserTableRow[]> {
+    const query = email.trim().toLowerCase();
+    this.userList = this.userList.filter((u) => {
+      const emailValue = (u.email || '').toLowerCase();
+      return !query || emailValue.includes(query);
+    });
     return of(this.userList);
   }
 
-  resetUserList(): Observable<User[]> {
-    this.userList = data.users as User[];
+  resetUserList(): Observable<UserTableRow[]> {
+    this.userList = this.mapUsersData(data.users as User[]);
     return of(this.userList);
   }
 
-  sortBy(field: UserSortField, order: 'asc' | 'desc'): Observable<User[]> {
-    this.userList.sort((a, b) => {
-      const valueA = a[field];
-      const valueB = b[field];
+  sortBy(field: UserSortField, order: 'asc' | 'desc'): Observable<UserTableRow[]> {
+    const sortedUsers = [...this.userList].sort((a, b) => {
+      const valueA =
+        field === 'fullName' || field === 'firstName' || field === 'lastName'
+          ? a.fullName
+          : a[field];
+      const valueB =
+        field === 'fullName' || field === 'firstName' || field === 'lastName'
+          ? b.fullName
+          : b[field];
 
-      if (valueA < valueB) {
-        return order === 'asc' ? -1 : 1;
-      } else if (valueA > valueB) {
-        return order === 'asc' ? 1 : -1;
-      } else {
-        return 0;
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        const comparison = valueA.localeCompare(valueB);
+        return order === 'asc' ? comparison : -comparison;
       }
+
+      const comparison = Number(valueA) - Number(valueB);
+      return order === 'asc' ? comparison : -comparison;
     });
 
+    this.userList = sortedUsers;
     return of(this.userList);
   }
-
 }

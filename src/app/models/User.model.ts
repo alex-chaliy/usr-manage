@@ -17,4 +17,16 @@ export interface User {
   isActive: boolean;
 }
 
-export type UserSortField = 'salaryMonthly' | 'age' | 'firstName' | 'lastName' | 'email';
+export interface UserTableRow {
+  fullName: string;
+  email: string;
+  position: string;
+  level: string;
+  primaryTech: string;
+  employmentType: string;
+  age: number;
+  salaryMonthly: number;
+}
+
+export type UserSortField = 'salaryMonthly' | 'age' |
+  'fullName' | 'firstName' | 'lastName' | 'email';

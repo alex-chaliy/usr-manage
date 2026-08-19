@@ -1,25 +1,13 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
-import { data } from '../../../data/mock_data';
-import { User, UserSortField } from '../../models/User.model';
+import { UserSortField, UserTableRow } from '../../models/User.model';
 import { PaginationMode } from '../../models/Pagination.model';
 import { CurrencyPipe } from '../../pipes/currency.pipe';
 import { UserService } from '../../services/user-service';
 import { FormsModule } from '@angular/forms';
 import { TogglePaginationMode } from '../toggle-pagination-mode/toggle-pagination-mode';
-
-const PAGE_SIZE = 20;
-
-interface UserTableRow {
-  fullName: string;
-  email: string;
-  position: string;
-  level: string;
-  primaryTech: string;
-  employmentType: string;
-  age: number;
-  salaryMonthly: number;
-}
+import { DEFAULT_PAGE_SIZE } from '../../constants/pagination.constants';
+import { SortDirection } from '../../models/Sort.model';
 
 @Component({
   selector: 'app-users-table',
@@ -41,24 +29,16 @@ export class UsersTable implements OnInit {
     'salaryMonthly',
   ];
 
-  
-  nameQuery = '';
+  fullNameQuery = '';
   emailQuery = '';
   currentSortField: UserSortField | null = null;
   paginationMode: PaginationMode = 'pagination';
-  sortDirection: 'asc' | 'desc' = 'asc';
+  sortDirection: SortDirection = 'asc';
   page = 1;
-  pageSize = PAGE_SIZE;
+  pageSize = DEFAULT_PAGE_SIZE;
   totalResults = 0;
   allUsers: UserTableRow[] = [];
   dataSource: UserTableRow[] = [];
-
-  private readonly positionMap = new Map(data.positions.map((position) => [position.id, position.name]));
-  private readonly levelMap = new Map(data.levels.map((level) => [level.id, level.name]));
-  private readonly techMap = new Map(data.tech.map((tech) => [tech.id, tech.name]));
-  private readonly employmentTypeMap = new Map(
-    data.employmentTypes.map((employmentType) => [employmentType.id, employmentType.name]),
-  );
 
   get totalPages(): number {
     return Math.max(1, Math.ceil(this.totalResults / this.pageSize));
@@ -72,31 +52,11 @@ export class UsersTable implements OnInit {
     return this.page < this.totalPages;
   }
 
-  get filteredUsers(): UserTableRow[] {
-    const name = this.nameQuery.trim().toLowerCase();
-    const email = this.emailQuery.trim().toLowerCase();
-
-    return this.allUsers.filter((user) => {
-      const matchesName = !name || user.fullName.toLowerCase().includes(name);
-      const matchesEmail = !email || user.email.toLowerCase().includes(email);
-
-      return matchesName && matchesEmail;
-    });
-  }
+  // filtering is handled by UserService; component keeps the current `allUsers` list
 
   ngOnInit(): void {
-    this.userService.getUsers().subscribe((users: User[]) => {
-      this.allUsers = users.map((user) => ({
-        fullName: `${user.firstName} ${user.lastName}`,
-        email: user.email,
-        position: this.positionMap.get(user.positionId) ?? 'Unknown',
-        level: this.levelMap.get(user.levelId) ?? 'Unknown',
-        primaryTech: this.techMap.get(user.primaryTechId) ?? 'Unknown',
-        employmentType: this.employmentTypeMap.get(user.employmentTypeId) ?? 'Unknown',
-        age: user.age,
-        salaryMonthly: user.salaryMonthly,
-      }));
-
+    this.userService.getUsers().subscribe((users: UserTableRow[]) => {
+      this.allUsers = users;
       this.totalResults = this.allUsers.length;
       this.applyPage();
     });
@@ -131,55 +91,62 @@ export class UsersTable implements OnInit {
     this.sortDirection = isSameField && this.sortDirection === 'asc' ? 'desc' : 'asc';
     this.currentSortField = field;
 
-    this.userService.sortBy(field, this.sortDirection).subscribe((users: User[]) => {
-      this.allUsers = users.map((user) => ({
-        fullName: `${user.firstName} ${user.lastName}`,
-        email: user.email,
-        position: this.positionMap.get(user.positionId) ?? 'Unknown',
-        level: this.levelMap.get(user.levelId) ?? 'Unknown',
-        primaryTech: this.techMap.get(user.primaryTechId) ?? 'Unknown',
-        employmentType: this.employmentTypeMap.get(user.employmentTypeId) ?? 'Unknown',
-        age: user.age,
-        salaryMonthly: user.salaryMonthly,
-      }));
-
+    this.userService.sortBy(field, this.sortDirection).subscribe((users: UserTableRow[]) => {
+      this.allUsers = users;
       this.applyPage();
     });
   }
 
   private applyPage(): void {
-    const filteredUsers = this.filteredUsers;
-    this.totalResults = filteredUsers.length;
+    this.totalResults = this.allUsers.length;
 
     const startIndex = (this.page - 1) * this.pageSize;
     const endIndex = startIndex + this.pageSize;
 
-    this.dataSource = filteredUsers.slice(startIndex, endIndex);
+    this.dataSource = this.allUsers.slice(startIndex, endIndex);
   }
 
   updateFilters(): void {
     this.page = 1;
-    this.applyPage();
+
+    this.userService.resetUserList().subscribe(() => {
+      const name = this.fullNameQuery.trim();
+      const email = this.emailQuery.trim();
+
+      if (name) {
+        this.userService.searchUsersByFullName(name).subscribe((users: UserTableRow[]) => {
+          if (email) {
+            this.userService.searchUsersByEmail(email).subscribe((users2: UserTableRow[]) => {
+              this.allUsers = users2;
+              this.applyPage();
+            });
+          } else {
+            this.allUsers = users;
+            this.applyPage();
+          }
+        });
+      } else if (email) {
+        this.userService.searchUsersByEmail(email).subscribe((users: UserTableRow[]) => {
+          this.allUsers = users;
+          this.applyPage();
+        });
+      } else {
+        this.userService.getUsers().subscribe((users: UserTableRow[]) => {
+          this.allUsers = users;
+          this.applyPage();
+        });
+      }
+    });
   }
 
   resetFilters(): void {
-    this.nameQuery = '';
+    this.fullNameQuery = '';
     this.emailQuery = '';
     this.page = 1;
     this.currentSortField = null;
     this.sortDirection = 'asc';
-    this.userService.resetUserList().subscribe((users: User[]) => {
-      this.allUsers = users.map((user) => ({
-        fullName: `${user.firstName} ${user.lastName}`,
-        email: user.email,
-        position: this.positionMap.get(user.positionId) ?? 'Unknown',
-        level: this.levelMap.get(user.levelId) ?? 'Unknown',
-        primaryTech: this.techMap.get(user.primaryTechId) ?? 'Unknown',
-        employmentType: this.employmentTypeMap.get(user.employmentTypeId) ?? 'Unknown',
-        age: user.age,
-        salaryMonthly: user.salaryMonthly,
-      }));
-
+    this.userService.resetUserList().subscribe((users: UserTableRow[]) => {
+      this.allUsers = users;
       this.applyPage();
     });
   }

@@ -13,12 +13,12 @@
 
   <div class="filters-row">
     <label class="field-group">
-      <span>Name</span>
+      <span>Full Name</span>
       <input
         type="text"
-        [(ngModel)]="nameQuery"
+        [(ngModel)]="fullNameQuery"
         (ngModelChange)="updateFilters()"
-        placeholder="Search by name"
+        placeholder="Search by full name"
       />
     </label>
 
@@ -56,7 +56,9 @@
       <th mat-header-cell *matHeaderCellDef>
         <button type="button" class="sort-button" (click)="sortTable('email')">
           <span>Email</span>
-          <span class="sort-icon">{{ currentSortField === 'email' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+          <span class="sort-icon">{{
+            currentSortField === 'email' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+          }}</span>
         </button>
       </th>
       <td mat-cell *matCellDef="let row">{{ row.email }}</td>
