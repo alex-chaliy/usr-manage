@@ -1,10 +1,12 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
 import { data } from '../../../data/mock_data';
-import { User, UserSortField } from '../../models/User';
+import { User, UserSortField } from '../../models/User.model';
+import { PaginationMode } from '../../models/Pagination.model';
 import { CurrencyPipe } from '../../pipes/currency.pipe';
 import { UserService } from '../../services/user-service';
 import { FormsModule } from '@angular/forms';
+import { TogglePaginationMode } from '../toggle-pagination-mode/toggle-pagination-mode';
 
 const PAGE_SIZE = 20;
 
@@ -21,7 +23,7 @@ interface UserTableRow {
 
 @Component({
   selector: 'app-users-table',
-  imports: [FormsModule, MatTableModule, CurrencyPipe],
+  imports: [FormsModule, MatTableModule, CurrencyPipe, TogglePaginationMode],
   templateUrl: './users-table.html',
   styleUrl: './users-table.scss',
 })
@@ -39,10 +41,11 @@ export class UsersTable implements OnInit {
     'salaryMonthly',
   ];
 
-  toggleValue = false;
+  
   nameQuery = '';
   emailQuery = '';
   currentSortField: UserSortField | null = null;
+  paginationMode: PaginationMode = 'pagination';
   sortDirection: 'asc' | 'desc' = 'asc';
   page = 1;
   pageSize = PAGE_SIZE;
@@ -99,8 +102,10 @@ export class UsersTable implements OnInit {
     });
   }
 
-  toggle(): void {
-    this.toggleValue = !this.toggleValue;
+  onModeChange(mode: PaginationMode): void {
+    // handle mode change from toggle component if needed
+    // currently we don't change table behavior here, but parent can react
+    console.log('Pagination mode changed:', mode);
   }
 
   previousPage(): void {

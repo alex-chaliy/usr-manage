@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { data } from '../../data/mock_data';
-import { User, UserSortField } from '../models/User';
+import { User, UserSortField } from '../models/User.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {

@@ -1,18 +1,9 @@
 <div class="table-wrapper">
   <div class="top-controls">
-    <div class="toggle-wrap">
-      <span class="toggle-label">Toggle</span>
-      <button
-        type="button"
-        class="toggle-switch"
-        [class.active]="toggleValue"
-        [attr.aria-pressed]="toggleValue"
-        (click)="toggle()"
-      >
-        <span class="toggle-knob"></span>
-      </button>
-      <span class="toggle-state">{{ toggleValue ? 'mode_B' : 'mode_A' }}</span>
-    </div>
+    <app-toggle-pagination-mode
+      [(mode)]="paginationMode"
+      (modeChange)="onModeChange($event)"
+    ></app-toggle-pagination-mode>
 
     <div class="pagination-summary">
       <span>Page {{ page }}</span>
@@ -23,12 +14,22 @@
   <div class="filters-row">
     <label class="field-group">
       <span>Name</span>
-      <input type="text" [(ngModel)]="nameQuery" (ngModelChange)="updateFilters()" placeholder="Search by name" />
+      <input
+        type="text"
+        [(ngModel)]="nameQuery"
+        (ngModelChange)="updateFilters()"
+        placeholder="Search by name"
+      />
     </label>
 
     <label class="field-group">
       <span>Email</span>
-      <input type="text" [(ngModel)]="emailQuery" (ngModelChange)="updateFilters()" placeholder="Search by email" />
+      <input
+        type="text"
+        [(ngModel)]="emailQuery"
+        (ngModelChange)="updateFilters()"
+        placeholder="Search by email"
+      />
     </label>
 
     <button type="button" class="reset-button" (click)="resetFilters()">Reset</button>
@@ -43,7 +44,9 @@
       <th mat-header-cell *matHeaderCellDef>
         <button type="button" class="sort-button" (click)="sortTable('lastName')">
           <span>Full name</span>
-          <span class="sort-icon">{{ currentSortField === 'lastName' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+          <span class="sort-icon">{{
+            currentSortField === 'lastName' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+          }}</span>
         </button>
       </th>
       <td mat-cell *matCellDef="let row">{{ row.fullName }}</td>
@@ -78,7 +81,9 @@
       <th mat-header-cell *matHeaderCellDef>
         <button type="button" class="sort-button" (click)="sortTable('age')">
           <span>Age</span>
-          <span class="sort-icon">{{ currentSortField === 'age' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+          <span class="sort-icon">{{
+            currentSortField === 'age' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+          }}</span>
         </button>
       </th>
       <td mat-cell *matCellDef="let row">{{ row.age }}</td>
@@ -88,14 +93,16 @@
       <th mat-header-cell *matHeaderCellDef>
         <button type="button" class="sort-button" (click)="sortTable('salaryMonthly')">
           <span>Monthly salary (EUR)</span>
-          <span class="sort-icon">{{ currentSortField === 'salaryMonthly' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+          <span class="sort-icon">{{
+            currentSortField === 'salaryMonthly' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+          }}</span>
         </button>
       </th>
       <td mat-cell *matCellDef="let row">{{ row.salaryMonthly | currency: 'EUR' }}</td>
     </ng-container>
 
     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns"></tr>
   </table>
 
   <div class="pagination-controls">
