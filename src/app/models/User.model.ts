@@ -17,4 +17,4 @@ export interface User {
   isActive: boolean;
 }
 
-export type UserSortField = 'salaryMonthly' | 'age' | 'firstName' | 'lastName';
+export type UserSortField = 'salaryMonthly' | 'age' | 'firstName' | 'lastName' | 'email';
