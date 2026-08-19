@@ -1,0 +1,112 @@
+<div class="table-wrapper">
+  <div class="top-controls">
+    <div class="toggle-wrap">
+      <span class="toggle-label">Toggle</span>
+      <button
+        type="button"
+        class="toggle-switch"
+        [class.active]="toggleValue"
+        [attr.aria-pressed]="toggleValue"
+        (click)="toggle()"
+      >
+        <span class="toggle-knob"></span>
+      </button>
+      <span class="toggle-state">{{ toggleValue ? 'mode_B' : 'mode_A' }}</span>
+    </div>
+
+    <div class="pagination-summary">
+      <span>Page {{ page }}</span>
+      <span>Total results: {{ totalResults }}</span>
+    </div>
+  </div>
+
+  <div class="filters-row">
+    <label class="field-group">
+      <span>Name</span>
+      <input type="text" [(ngModel)]="nameQuery" (ngModelChange)="updateFilters()" placeholder="Search by name" />
+    </label>
+
+    <label class="field-group">
+      <span>Email</span>
+      <input type="text" [(ngModel)]="emailQuery" (ngModelChange)="updateFilters()" placeholder="Search by email" />
+    </label>
+
+    <button type="button" class="reset-button" (click)="resetFilters()">Reset</button>
+  </div>
+
+  <div class="table-header">
+    <h2>Users</h2>
+  </div>
+
+  <table mat-table [dataSource]="dataSource" class="mat-elevation-z2 users-table">
+    <ng-container matColumnDef="fullName">
+      <th mat-header-cell *matHeaderCellDef>
+        <button type="button" class="sort-button" (click)="sortTable('lastName')">
+          <span>Full name</span>
+          <span class="sort-icon">{{ currentSortField === 'lastName' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+        </button>
+      </th>
+      <td mat-cell *matCellDef="let row">{{ row.fullName }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="email">
+      <th mat-header-cell *matHeaderCellDef>Email</th>
+      <td mat-cell *matCellDef="let row">{{ row.email }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="position">
+      <th mat-header-cell *matHeaderCellDef>Position</th>
+      <td mat-cell *matCellDef="let row">{{ row.position }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="level">
+      <th mat-header-cell *matHeaderCellDef>Level</th>
+      <td mat-cell *matCellDef="let row">{{ row.level }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="primaryTech">
+      <th mat-header-cell *matHeaderCellDef>Primary technology</th>
+      <td mat-cell *matCellDef="let row">{{ row.primaryTech }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="employmentType">
+      <th mat-header-cell *matHeaderCellDef>Employment type</th>
+      <td mat-cell *matCellDef="let row">{{ row.employmentType }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="age">
+      <th mat-header-cell *matHeaderCellDef>
+        <button type="button" class="sort-button" (click)="sortTable('age')">
+          <span>Age</span>
+          <span class="sort-icon">{{ currentSortField === 'age' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+        </button>
+      </th>
+      <td mat-cell *matCellDef="let row">{{ row.age }}</td>
+    </ng-container>
+
+    <ng-container matColumnDef="salaryMonthly">
+      <th mat-header-cell *matHeaderCellDef>
+        <button type="button" class="sort-button" (click)="sortTable('salaryMonthly')">
+          <span>Monthly salary (EUR)</span>
+          <span class="sort-icon">{{ currentSortField === 'salaryMonthly' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕' }}</span>
+        </button>
+      </th>
+      <td mat-cell *matCellDef="let row">{{ row.salaryMonthly | currency: 'EUR' }}</td>
+    </ng-container>
+
+    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+  </table>
+
+  <div class="pagination-controls">
+    <button mat-stroked-button type="button" [disabled]="!hasPreviousPage" (click)="previousPage()">
+      Previous
+    </button>
+
+    <span>Page {{ page }}</span>
+
+    <button mat-stroked-button type="button" [disabled]="!hasNextPage" (click)="nextPage()">
+      Next
+    </button>
+  </div>
+</div>
