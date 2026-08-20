@@ -1,7 +1,9 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { data } from '../../data/mock_data';
-import { User, UserSortField, UserTableRow } from '../models/User.model';
+import { User, UserListFilters, UserSortField, UserTableRow } from '../models/User.model';
+import { DEFAULT_PAGE_SIZE } from '../constants/pagination.constants';
+import { ApiResponse } from '../models/ApiResponse.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -29,35 +31,67 @@ export class UserService {
     }));
   }
 
-  getUsers(): Observable<UserTableRow[]> {
-    return of(this.userList);
+  getUsers(filters: UserListFilters): Observable<ApiResponse<UserTableRow[]>> {
+    return this.applyFilters(filters);
   }
 
-  searchUsersByFullName(fullName: string): Observable<UserTableRow[]> {
+  private applyFilters(filters: UserListFilters): Observable<ApiResponse<UserTableRow[]>> {
+    if (!filters) {
+      return of(this.slicePage(this.userList, 1, DEFAULT_PAGE_SIZE));
+    }
+
+    let users = [...this.userList];
+
+    if (filters.fullNameQuery) {
+      users = this.searchUsersByFullName(users, filters.fullNameQuery);
+    }
+    if (filters.emailQuery) {
+      users = this.searchUsersByEmail(users, filters.emailQuery);
+    }
+    if (filters.sortField) {
+      users = this.sortBy(users, filters.sortField, filters.sortDirection || 'asc');
+    }
+
+    return of(this.slicePage(users, filters.page, filters.pageSize));
+  }
+
+  private slicePage(
+    userList: UserTableRow[],
+    page: number,
+    pageSize: number,
+  ): ApiResponse<UserTableRow[]> {
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    return {
+      data: userList.slice(startIndex, endIndex),
+      offset: startIndex,
+      limit: pageSize,
+      total: userList.length,
+    };
+  }
+
+  private searchUsersByFullName(users: UserTableRow[], fullName: string): UserTableRow[] {
     const query = fullName.trim().toLowerCase();
-    this.userList = this.userList.filter((u) => {
+    return users.filter((u) => {
       const fullNameValue = (u.fullName || '').toLowerCase();
       return !query || fullNameValue.includes(query);
     });
-    return of(this.userList);
   }
 
-  searchUsersByEmail(email: string): Observable<UserTableRow[]> {
+  private searchUsersByEmail(users: UserTableRow[], email: string): UserTableRow[] {
     const query = email.trim().toLowerCase();
-    this.userList = this.userList.filter((u) => {
+    return users.filter((u) => {
       const emailValue = (u.email || '').toLowerCase();
       return !query || emailValue.includes(query);
     });
-    return of(this.userList);
   }
 
-  resetUserList(): Observable<UserTableRow[]> {
-    this.userList = this.mapUsersData(data.users as User[]);
-    return of(this.userList);
-  }
-
-  sortBy(field: UserSortField, order: 'asc' | 'desc'): Observable<UserTableRow[]> {
-    const sortedUsers = [...this.userList].sort((a, b) => {
+  private sortBy(
+    users: UserTableRow[],
+    field: UserSortField,
+    order: 'asc' | 'desc',
+  ): UserTableRow[] {
+    return [...users].sort((a, b) => {
       const valueA =
         field === 'fullName' || field === 'firstName' || field === 'lastName'
           ? a.fullName
@@ -75,8 +109,5 @@ export class UserService {
       const comparison = Number(valueA) - Number(valueB);
       return order === 'asc' ? comparison : -comparison;
     });
-
-    this.userList = sortedUsers;
-    return of(this.userList);
   }
 }

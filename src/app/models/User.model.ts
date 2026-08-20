@@ -1,3 +1,5 @@
+import { SortDirection } from './Sort.model';
+
 export interface User {
   id: string;
   firstName: string;
@@ -28,5 +30,14 @@ export interface UserTableRow {
   salaryMonthly: number;
 }
 
-export type UserSortField = 'salaryMonthly' | 'age' |
-  'fullName' | 'firstName' | 'lastName' | 'email';
+export type UserSortField =
+  'salaryMonthly' | 'age' | 'fullName' | 'firstName' | 'lastName' | 'email';
+
+export interface UserListFilters {
+  fullNameQuery: string;
+  emailQuery: string;
+  page: number;
+  pageSize: number;
+  sortField: UserSortField | null;
+  sortDirection: SortDirection;
+}
