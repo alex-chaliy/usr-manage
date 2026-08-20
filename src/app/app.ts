@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { UsersTable } from './components/users-table/users-table';
+import { UsersTable } from './features/users-table/users-table';
 
 @Component({
   selector: 'app-root',
