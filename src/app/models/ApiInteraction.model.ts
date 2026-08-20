@@ -4,3 +4,5 @@ export interface ApiResponse<T> {
   limit: number;
   total: number;
 }
+
+export type AsyncState = 'loading' | 'success' | 'error';

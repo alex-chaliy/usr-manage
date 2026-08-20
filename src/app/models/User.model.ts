@@ -40,4 +40,9 @@ export interface UserListFilters {
   pageSize: number;
   sortField: UserSortField | null;
   sortDirection: SortDirection;
+
+  positionQuery: string;
+  levelQuery: string;
+  techQuery: string;
+  employmentTypeQuery: string;
 }

@@ -1,9 +1,9 @@
 import { Injectable } from '@angular/core';
-import { Observable, of } from 'rxjs';
+import { delay, Observable, of } from 'rxjs';
 import { data } from '../../data/mock_data';
 import { User, UserListFilters, UserSortField, UserTableRow } from '../models/User.model';
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination.constants';
-import { ApiResponse } from '../models/ApiResponse.model';
+import { ApiResponse } from '../models/ApiInteraction.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -32,7 +32,8 @@ export class UserService {
   }
 
   getUsers(filters: UserListFilters): Observable<ApiResponse<UserTableRow[]>> {
-    return this.applyFilters(filters);
+    return this.applyFilters(filters)
+      .pipe(delay(500)); // Imitate network delay
   }
 
   private applyFilters(filters: UserListFilters): Observable<ApiResponse<UserTableRow[]>> {
@@ -47,6 +48,18 @@ export class UserService {
     }
     if (filters.emailQuery) {
       users = this.searchUsersByEmail(users, filters.emailQuery);
+    }
+    if (filters.positionQuery) {
+      users = this.searchUsersByPosition(users, filters.positionQuery);
+    }
+    if (filters.levelQuery) {
+      users = this.searchUsersByLevel(users, filters.levelQuery);
+    }
+    if (filters.techQuery) {
+      users = this.searchUsersByPrimaryTech(users, filters.techQuery);
+    }
+    if (filters.employmentTypeQuery) {
+      users = this.searchUsersByEmploymentType(users, filters.employmentTypeQuery);
     }
     if (filters.sortField) {
       users = this.sortBy(users, filters.sortField, filters.sortDirection || 'asc');
@@ -86,6 +99,41 @@ export class UserService {
     });
   }
 
+  private searchUsersByPosition(users: UserTableRow[], position: string): UserTableRow[] {
+    const query = position.trim().toLowerCase();
+    return users.filter((u) => {
+      const positionValue = (u.position || '').toLowerCase();
+      return !query || positionValue === query;
+    });
+  }
+
+  private searchUsersByLevel(users: UserTableRow[], level: string): UserTableRow[] {
+    const query = level.trim().toLowerCase();
+    return users.filter((u) => {
+      const levelValue = (u.level || '').toLowerCase();
+      return !query || levelValue === query;
+    });
+  }
+
+  private searchUsersByPrimaryTech(users: UserTableRow[], primaryTech: string): UserTableRow[] {
+    const query = primaryTech.trim().toLowerCase();
+    return users.filter((u) => {
+      const primaryTechValue = (u.primaryTech || '').toLowerCase();
+      return !query || primaryTechValue === query;
+    });
+  }
+
+  private searchUsersByEmploymentType(
+    users: UserTableRow[],
+    employmentType: string,
+  ): UserTableRow[] {
+    const query = employmentType.trim().toLowerCase();
+    return users.filter((u) => {
+      const employmentTypeValue = (u.employmentType || '').toLowerCase();
+      return !query || employmentTypeValue === query;
+    });
+  }
+
   private sortBy(
     users: UserTableRow[],
     field: UserSortField,
@@ -109,5 +157,41 @@ export class UserService {
       const comparison = Number(valueA) - Number(valueB);
       return order === 'asc' ? comparison : -comparison;
     });
+  }
+
+  getPositions(): Observable<ApiResponse<Map<string, string>>> {
+    return of({
+      data: this.positionMap,
+      offset: 0,
+      limit: this.positionMap.size,
+      total: this.positionMap.size,
+    }).pipe(delay(1000)); // Imitate network delay
+  }
+
+  getLevels(): Observable<ApiResponse<Map<string, string>>> {
+    return of({
+      data: this.levelMap,
+      offset: 0,
+      limit: this.levelMap.size,
+      total: this.levelMap.size,
+    }).pipe(delay(1200)); // Imitate network delay
+  }
+
+  getTechs(): Observable<ApiResponse<Map<string, string>>> {
+    return of({
+      data: this.techMap,
+      offset: 0,
+      limit: this.techMap.size,
+      total: this.techMap.size,
+    }).pipe(delay(500)); // Imitate network delay
+  }
+
+  getEmploymentTypes(): Observable<ApiResponse<Map<string, string>>> {
+    return of({
+      data: this.employmentTypeMap,
+      offset: 0,
+      limit: this.employmentTypeMap.size,
+      total: this.employmentTypeMap.size,
+    }).pipe(delay(2000)); // Imitate network delay
   }
 }

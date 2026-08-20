@@ -60,6 +60,10 @@
   gap: 16px;
   margin: 16px 0 20px;
   align-items: end;
+
+  &--custom-selects {
+    grid-template-columns: repeat(3, minmax(220px, 1fr)) auto;
+  }
 }
 
 .field-group {
