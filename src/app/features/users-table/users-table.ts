@@ -81,7 +81,13 @@ export class UsersTable implements OnInit {
     this.getSelectOptions();
   }
 
-  getFilteredUsers(keepPage = false): void {
+  /**
+   * @param keepPage - if true, keeps current render of data-table and current page number.
+   * current page number can be increased/decreased from outside, but it doesn't reset page number to 1.
+   * @param sumChunk - if true, don't wipe users-list with new chunk (next page data),
+   * but add new chunk to existed users-list instead.
+   */
+  getFilteredUsers(keepPage = false, sumChunk = false): void {
     this.usersAsyncState = 'loading';
     this.keepCurrentRender = keepPage;
     this.page = keepPage ? this.page : 1;
@@ -92,8 +98,11 @@ export class UsersTable implements OnInit {
       )
       .subscribe({
         next: (res: ApiResponse<UserTableRow[]>) => {
+          if (!this.allUsers) {
+            this.allUsers = [];
+          }
           this.usersAsyncState = 'success';
-          this.allUsers = res.data;
+          this.allUsers = sumChunk ? [...this.allUsers, ...res.data] : res.data;
           this.totalResults = res.total;
           this.cdk.detectChanges(); // Ensure the view updates after data changes
         },
@@ -121,6 +130,7 @@ export class UsersTable implements OnInit {
     this.page = 1;
     this.pageSize = DEFAULT_PAGE_SIZE;
     this.pageSizeOption = [...DEFAULT_PAGE_SIZE_OPTION]; // reset page-size custom-select
+    this.getFilteredUsers();
   }
 
   previousPage(): void {
@@ -136,7 +146,7 @@ export class UsersTable implements OnInit {
       return;
     }
     this.page += 1;
-    this.getFilteredUsers(true); // Keep the current page when navigating
+    this.getFilteredUsers(true); // Keep current page render when navigating
   }
 
   sortTable(field: UserSortField): void {
@@ -287,5 +297,11 @@ export class UsersTable implements OnInit {
           console.error('Error fetching employment type options:', err);
         },
       });
+  }
+
+  // Infinite Scroll Methods
+
+  loadChunk() {
+    this.nextPage();
   }
 }
