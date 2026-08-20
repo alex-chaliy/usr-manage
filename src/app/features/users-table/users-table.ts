@@ -84,8 +84,14 @@ export class UsersTable implements OnInit {
   /**
    * @param keepPage - if true, keeps current render of data-table and current page number.
    * current page number can be increased/decreased from outside, but it doesn't reset page number to 1.
+   * to say shortly, do not reset page number to 1,
+   * and keep current render of data-table until we recieve the next page data.
+   * `keepPage = true` is used when sorting or navigating between pages,
+   * that helps to avoid ui blink. 
    * @param sumChunk - if true, don't wipe users-list with new chunk (next page data),
    * but add new chunk to existed users-list instead.
+   * `sumChunk = true` needed for infinite scroll.
+   * `sumChunk = false` works with classic pagination.
    */
   getFilteredUsers(keepPage = false, sumChunk = false): void {
     this.usersAsyncState = 'loading';
@@ -301,7 +307,11 @@ export class UsersTable implements OnInit {
 
   // Infinite Scroll Methods
 
-  loadChunk() {
-    this.nextPage();
+  nextChunk() {
+    if (!this.hasNextPage) {
+      return;
+    }
+    this.page += 1;
+    this.getFilteredUsers(true, true);
   }
 }
