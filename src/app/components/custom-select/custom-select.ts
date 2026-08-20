@@ -103,7 +103,6 @@ export class CustomSelect implements OnInit {
   }
 
   onSelectChange(): void {
-    console.log('onSelectChange : selectedKey:', this.selectedKey);
     if (!this._optionsList || !this.selectedKey) {
       return;
     }

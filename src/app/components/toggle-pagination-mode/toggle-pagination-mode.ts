@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PaginationMode } from '../../models/Pagination.model';
 
@@ -8,6 +8,7 @@ import { PaginationMode } from '../../models/Pagination.model';
   imports: [CommonModule],
   templateUrl: './toggle-pagination-mode.html',
   styleUrls: ['./toggle-pagination-mode.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TogglePaginationMode {
   private _initialMode: PaginationMode = 'pagination';

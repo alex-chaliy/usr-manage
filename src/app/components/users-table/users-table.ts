@@ -1,5 +1,5 @@
 import { Observable, take } from 'rxjs';
-import { ChangeDetectorRef, Component, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
 import { UserListFilters, UserSortField, UserTableRow } from '../../models/User.model';
 import { PaginationMode } from '../../models/Pagination.model';
@@ -13,6 +13,7 @@ import { CustomSelect } from '../custom-select/custom-select';
 import { SortDirection } from '../../models/Sort.model';
 import { ApiResponse, AsyncState } from '../../models/ApiInteraction.model';
 import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-users-table',
@@ -30,6 +31,7 @@ import { CommonModule } from '@angular/common';
 export class UsersTable implements OnInit {
   private readonly userService = inject(UserService);
   private readonly cdk = inject(ChangeDetectorRef);
+  private destroyRef = inject(DestroyRef);
 
   readonly displayedColumns = [
     'fullName',
@@ -84,16 +86,19 @@ export class UsersTable implements OnInit {
     this.page = keepPage ? this.page : 1;
     this.userService
       .getUsers(this.getFiltersObject())
+      .pipe(
+        takeUntilDestroyed(this.destroyRef), // Automatically cleans up on destroy
+      )
       .subscribe({
         next: (res: ApiResponse<UserTableRow[]>) => {
           this.usersAsyncState = 'success';
           this.allUsers = res.data;
           this.totalResults = res.total;
-          console.log('getFilteredUsers : allUsers:', this.allUsers);
           this.cdk.detectChanges(); // Ensure the view updates after data changes
         },
-        error: () => {
+        error: (err) => {
           this.usersAsyncState = 'error';
+          console.error('Error fetching filtered users:', err);
         },
       });
   }
@@ -182,7 +187,6 @@ export class UsersTable implements OnInit {
 
   onSelectTechChange(selectedOption: [string, string] | null): void {
     this.techQuery = selectedOption;
-    console.log('onSelectTechChange : techQuery:', this.techQuery);
     this.getFilteredUsers();
   }
 
@@ -213,57 +217,73 @@ export class UsersTable implements OnInit {
 
   getPositionOptions(): void {
     this.positionMapAsyncState = 'loading';
-    this.userService.getPositions().subscribe({
-      next: (res: ApiResponse<Map<string, string>>) => {
-        this.positionMap = res.data;
-        this.positionMapAsyncState = 'success';
-        this.cdk.detectChanges();
-      },
-      error: () => {
-        this.positionMapAsyncState = 'error';
-      },
-    });
+    this.userService
+      .getPositions()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res: ApiResponse<Map<string, string>>) => {
+          this.positionMap = res.data;
+          this.positionMapAsyncState = 'success';
+          this.cdk.detectChanges();
+        },
+        error: (err) => {
+          this.positionMapAsyncState = 'error';
+          console.error('Error fetching position options:', err);
+        },
+      });
   }
 
   getLevelOptions(): void {
     this.levelMapAsyncState = 'loading';
-    this.userService.getLevels().subscribe({
-      next: (res: ApiResponse<Map<string, string>>) => {
-        this.levelMap = res.data;
-        this.levelMapAsyncState = 'success';
-        this.cdk.detectChanges();
-      },
-      error: () => {
-        this.levelMapAsyncState = 'error';
-      },
-    });
+    this.userService
+      .getLevels()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res: ApiResponse<Map<string, string>>) => {
+          this.levelMap = res.data;
+          this.levelMapAsyncState = 'success';
+          this.cdk.detectChanges();
+        },
+        error: (err) => {
+          this.levelMapAsyncState = 'error';
+          console.error('Error fetching level options:', err);
+        },
+      });
   }
 
   getTechOptions(): void {
     this.techMapAsyncState = 'loading';
-    this.userService.getTechs().subscribe({
-      next: (res: ApiResponse<Map<string, string>>) => {
-        this.techMap = res.data;
-        this.techMapAsyncState = 'success';
-        this.cdk.detectChanges();
-      },
-      error: () => {
-        this.techMapAsyncState = 'error';
-      },
-    });
+    this.userService
+      .getTechs()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res: ApiResponse<Map<string, string>>) => {
+          this.techMap = res.data;
+          this.techMapAsyncState = 'success';
+          this.cdk.detectChanges();
+        },
+        error: (err) => {
+          this.techMapAsyncState = 'error';
+          console.error('Error fetching tech options:', err);
+        },
+      });
   }
 
   getEmploymentTypeOptions(): void {
     this.employmentTypeMapAsyncState = 'loading';
-    this.userService.getEmploymentTypes().subscribe({
-      next: (res: ApiResponse<Map<string, string>>) => {
-        this.employmentTypeMap = res.data;
-        this.employmentTypeMapAsyncState = 'success';
-        this.cdk.detectChanges();
-      },
-      error: () => {
-        this.employmentTypeMapAsyncState = 'error';
-      },
-    });
+    this.userService
+      .getEmploymentTypes()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (res: ApiResponse<Map<string, string>>) => {
+          this.employmentTypeMap = res.data;
+          this.employmentTypeMapAsyncState = 'success';
+          this.cdk.detectChanges();
+        },
+        error: (err) => {
+          this.employmentTypeMapAsyncState = 'error';
+          console.error('Error fetching employment type options:', err);
+        },
+      });
   }
 }
