@@ -72,7 +72,9 @@ export class UsersTable implements OnInit {
   techMapAsyncState: AsyncState = 'loading';
   employmentTypeMapAsyncState: AsyncState = 'loading';
 
-  defaultPageSizeOption = DEFAULT_PAGE_SIZE_OPTION;
+  keepCurrentRender = false;
+
+  pageSizeOption = DEFAULT_PAGE_SIZE_OPTION;
 
   ngOnInit(): void {
     this.getFilteredUsers();
@@ -80,9 +82,8 @@ export class UsersTable implements OnInit {
   }
 
   getFilteredUsers(keepPage = false): void {
-    if (!keepPage) {
-      this.usersAsyncState = 'loading';
-    }
+    this.usersAsyncState = 'loading';
+    this.keepCurrentRender = keepPage;
     this.page = keepPage ? this.page : 1;
     this.userService
       .getUsers(this.getFiltersObject())
@@ -116,9 +117,10 @@ export class UsersTable implements OnInit {
   }
 
   onPaginationModeChange(mode: PaginationMode): void {
-    // handle mode change from toggle component if needed
-    // currently we don't change table behavior here, but parent can react
     console.log('Pagination mode changed:', mode);
+    this.page = 1;
+    this.pageSize = DEFAULT_PAGE_SIZE;
+    this.pageSizeOption = [...DEFAULT_PAGE_SIZE_OPTION]; // reset page-size custom-select
   }
 
   previousPage(): void {

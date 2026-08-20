@@ -77,22 +77,22 @@
     <h2>Users</h2>
   </div>
 
-  @switch (usersAsyncState) {
-    @case ('loading') {
+    @if (usersAsyncState === 'loading') {
       <ng-template [ngTemplateOutlet]="loadingUsers"></ng-template>
     }
-    @case ('error') {
+
+    @if (usersAsyncState === 'error') {
       <ng-template [ngTemplateOutlet]="errorUsers"></ng-template>
     }
-    @default {
+
+    @if (usersAsyncState === 'success' || keepCurrentRender) {
       <ng-template [ngTemplateOutlet]="usersTable"></ng-template>
     }
-  }
 
   <div class="pagination-controls">
     <app-custom-select
       [optionsList]="pageSizeMap"
-      [valueOption]="defaultPageSizeOption"
+      [valueOption]="pageSizeOption"
       (selectionChange)="onSelectPageSizeChange($event)"
     ></app-custom-select>
     <button mat-stroked-button type="button" [disabled]="!hasPreviousPage" (click)="previousPage()">
