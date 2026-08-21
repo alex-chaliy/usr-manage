@@ -20,6 +20,7 @@ export interface User {
 }
 
 export interface UserTableRow {
+  id: string;
   fullName: string;
   email: string;
   position: string;

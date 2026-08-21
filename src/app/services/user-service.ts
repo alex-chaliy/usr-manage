@@ -20,6 +20,7 @@ export class UserService {
 
   private mapUsersData(users: User[]): UserTableRow[] {
     return users.map((user) => ({
+      id: user.id,
       fullName: `${user.firstName} ${user.lastName}`,
       email: user.email,
       position: this.positionMap.get(user.positionId) ?? 'Unknown',
@@ -33,7 +34,7 @@ export class UserService {
 
   getUsers(filters: UserListFilters): Observable<ApiResponse<UserTableRow[]>> {
     return this.applyFilters(filters)
-      .pipe(delay(500)); // Imitate network delay
+      .pipe(delay(1000)); // Imitate network delay
   }
 
   private applyFilters(filters: UserListFilters): Observable<ApiResponse<UserTableRow[]>> {

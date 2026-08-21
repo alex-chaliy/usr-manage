@@ -1,6 +1,7 @@
-import { Observable, take } from 'rxjs';
-import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit, ViewChild } from '@angular/core';
 import { MatTableModule } from '@angular/material/table';
+import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
+import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
 import { UserListFilters, UserSortField, UserTableRow } from '../../models/User.model';
 import { PaginationMode } from '../../models/Pagination.model';
 import { CurrencyPipe } from '../../pipes/currency.pipe';
@@ -21,6 +22,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     CommonModule,
     FormsModule,
     MatTableModule,
+    ScrollingModule,
+    InfiniteScrollDirective,
     CurrencyPipe,
     TogglePaginationMode,
     CustomSelect,
@@ -32,6 +35,9 @@ export class UsersTable implements OnInit {
   private readonly userService = inject(UserService);
   private readonly cdk = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
+  
+  @ViewChild(CdkVirtualScrollViewport) private viewport?: CdkVirtualScrollViewport;
+  readonly virtualRowHeight = 56;
 
   readonly displayedColumns = [
     'fullName',
@@ -111,6 +117,7 @@ export class UsersTable implements OnInit {
           this.allUsers = sumChunk ? [...this.allUsers, ...res.data] : res.data;
           this.totalResults = res.total;
           this.cdk.detectChanges(); // Ensure the view updates after data changes
+          this.viewport?.checkViewportSize();
         },
         error: (err) => {
           this.usersAsyncState = 'error';
@@ -308,10 +315,14 @@ export class UsersTable implements OnInit {
   // Infinite Scroll Methods
 
   nextChunk() {
-    if (!this.hasNextPage) {
+    if (this.usersAsyncState === 'loading' || !this.hasNextPage) {
       return;
     }
     this.page += 1;
     this.getFilteredUsers(true, true);
+  }
+
+  trackByUser(_index: number, row: UserTableRow): string {
+    return row.id;
   }
 }

@@ -6,7 +6,7 @@
     ></app-toggle-pagination-mode>
 
     <div class="pagination-summary">
-      <span>Page {{ page }}</span>
+      <span *ngIf="paginationMode === 'pagination'">Page {{ page }}</span>
       <span>Total results: {{ totalResults }}</span>
     </div>
   </div>
@@ -73,23 +73,25 @@
     ></app-custom-select>
   </div>
 
-  <div class="table-header">
-    <h2>Users</h2>
-  </div>
+  @if (usersAsyncState === 'loading') {
+    <ng-template [ngTemplateOutlet]="loadingUsers"></ng-template>
+  } @else {
+    <h2 class="table-title">Users</h2>
+  }
 
-    @if (usersAsyncState === 'loading') {
-      <ng-template [ngTemplateOutlet]="loadingUsers"></ng-template>
-    }
+  @if (usersAsyncState === 'error') {
+    <ng-template [ngTemplateOutlet]="errorUsers"></ng-template>
+  }
 
-    @if (usersAsyncState === 'error') {
-      <ng-template [ngTemplateOutlet]="errorUsers"></ng-template>
-    }
-
-    @if (usersAsyncState === 'success' || keepCurrentRender) {
+  @if (usersAsyncState === 'success' || keepCurrentRender) {
+    @if (paginationMode === 'infinite_scroll') {
+      <ng-template [ngTemplateOutlet]="infiniteUsersTable"></ng-template>
+    } @else {
       <ng-template [ngTemplateOutlet]="usersTable"></ng-template>
     }
+  }
 
-  <div class="pagination-controls">
+  <div class="pagination-controls" *ngIf="paginationMode === 'pagination'">
     <app-custom-select
       [optionsList]="pageSizeMap"
       [valueOption]="pageSizeOption"
@@ -108,15 +110,19 @@
 </div>
 
 <ng-template #loadingUsers>
-  <div class="loading">Loading users...</div>
+  <h2 class="table-title">Loading Users...</h2>
 </ng-template>
 
 <ng-template #errorUsers>
-  <div class="error">Error loading users. Please try again.</div>
+  <div class="error">Error loading Users. Please try again.</div>
 </ng-template>
 
 <ng-template #usersTable>
-  <table mat-table [dataSource]="allUsers" class="mat-elevation-z2 users-table">
+  <table
+    mat-table
+    [dataSource]="allUsers"
+    class="mat-elevation-z2 users-table users-table-paginated"
+  >
     <ng-container matColumnDef="fullName">
       <th mat-header-cell *matHeaderCellDef>
         <button type="button" class="sort-button" (click)="sortTable('lastName')">
@@ -170,19 +176,21 @@
           }}</span>
         </button>
       </th>
-      <td mat-cell *matCellDef="let row">{{ row.age }}</td>
+      <td mat-cell class="col-age" *matCellDef="let row">{{ row.age }}</td>
     </ng-container>
 
     <ng-container matColumnDef="salaryMonthly">
       <th mat-header-cell *matHeaderCellDef>
         <button type="button" class="sort-button" (click)="sortTable('salaryMonthly')">
-          <span>Monthly salary (EUR)</span>
+          <span>Monthly salary</span>
           <span class="sort-icon">{{
             currentSortField === 'salaryMonthly' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
           }}</span>
         </button>
       </th>
-      <td mat-cell *matCellDef="let row">{{ row.salaryMonthly | currency: 'EUR' }}</td>
+      <td mat-cell class="col-salary" *matCellDef="let row">
+        {{ row.salaryMonthly | currency: 'EUR' }}
+      </td>
     </ng-container>
 
     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
@@ -196,4 +204,85 @@
 
 <ng-template #noUsers>
   <div class="no-users">No users found.</div>
+</ng-template>
+
+<ng-template #infiniteUsersTable>
+  <table class="mat-elevation-z2 users-table users-table-infinite">
+    <thead>
+      <tr>
+        <th>
+          <button type="button" class="sort-button" (click)="sortTable('lastName')">
+            <span>Full name</span>
+            <span class="sort-icon">{{
+              currentSortField === 'lastName' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+            }}</span>
+          </button>
+        </th>
+        <th>
+          <button type="button" class="sort-button" (click)="sortTable('email')">
+            <span>Email</span>
+            <span class="sort-icon">{{
+              currentSortField === 'email' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+            }}</span>
+          </button>
+        </th>
+        <th>Position</th>
+        <th>Level</th>
+        <th>Primary technology</th>
+        <th>Employment type</th>
+        <th>
+          <button type="button" class="sort-button" (click)="sortTable('age')">
+            <span>Age</span>
+            <span class="sort-icon">{{
+              currentSortField === 'age' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+            }}</span>
+          </button>
+        </th>
+        <th>
+          <button type="button" class="sort-button" (click)="sortTable('salaryMonthly')">
+            <span>Monthly salary </span>
+            <span class="sort-icon">{{
+              currentSortField === 'salaryMonthly' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+            }}</span>
+          </button>
+        </th>
+      </tr>
+    </thead>
+    <tbody
+      class="infinite-users-host"
+      infiniteScroll
+      [scrollWindow]="false"
+      [infiniteScrollDistance]="1"
+      [infiniteScrollThrottle]="150"
+      [infiniteScrollContainer]="'.users-virtual-viewport'"
+      [infiniteScrollDisabled]="usersAsyncState === 'loading' || !hasNextPage"
+      (scrolled)="nextChunk()"
+    >
+      <cdk-virtual-scroll-viewport
+        class="users-virtual-viewport"
+        [itemSize]="virtualRowHeight"
+        minBufferPx="200"
+        maxBufferPx="400"
+      >
+        <tr
+          *cdkVirtualFor="let row of allUsers; trackBy: trackByUser"
+          class="virtual-users-row"
+          [style.height.px]="virtualRowHeight"
+        >
+          <td>{{ row.fullName }}</td>
+          <td>{{ row.email }}</td>
+          <td>{{ row.position }}</td>
+          <td>{{ row.level }}</td>
+          <td>{{ row.primaryTech }}</td>
+          <td>{{ row.employmentType }}</td>
+          <td>{{ row.age }}</td>
+          <td>{{ row.salaryMonthly | currency: 'EUR' }}</td>
+        </tr>
+      </cdk-virtual-scroll-viewport>
+    </tbody>
+  </table>
+
+  @if (allUsers.length === 0) {
+    <ng-container *ngTemplateOutlet="noUsers"></ng-container>
+  }
 </ng-template>
