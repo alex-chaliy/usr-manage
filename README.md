@@ -11,6 +11,7 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 6. Ability to combine search, filtering, sorting and pagination.
 7. Loading indicators and imitation of network delay.
 8. Switching between 2 modes: Classic Pagination and Infinite Scroll.
+9. Bonus: added unit-tests for sort and filtering logic.
 
 ## Development server
 
