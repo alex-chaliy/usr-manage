@@ -2,6 +2,17 @@
 
 This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 22.0.0.
 
+## What was implemented
+1. Displayed table with users data.
+2. Implemented search by full name and email.
+3. Filtering by position, level, prefered technology, employment type.
+4. Sorting by full name, email, age, salary.
+5. Pagination and change page size.
+6. Ability to combine search, filtering, sorting and pagination.
+7. Loading indicators and imitation of network delay.
+8. Switching between 2 modes: Classic Pagination and Infinite Scroll.
+9. Bonus: added unit-tests for sort and filtering logic.
+
 ## Development server
 
 To start a local development server, run:
@@ -11,6 +22,22 @@ ng serve
 ```
 
 Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+
+## Building
+
+To build the project run:
+
+```bash
+ng build
+```
+
+To build the project for production run:
+
+```bash
+npm run build:prod
+```
+
+This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
 ## Code scaffolding
 
@@ -25,16 +52,6 @@ For a complete list of available schematics (such as `components`, `directives`,
 ```bash
 ng generate --help
 ```
-
-## Building
-
-To build the project run:
-
-```bash
-ng build
-```
-
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
 
 ## Running unit tests
 

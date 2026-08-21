@@ -1,0 +1,8 @@
+<div class="custom-select">
+  <select [disabled]="isLoading || disabled" [(ngModel)]="selectedKey" (change)="onSelectChange()">
+    <option value="" disabled *ngIf="isLoading">{{ loadingPlaceholder }}</option>
+    <option value="" disabled *ngIf="!isLoading && optionEntries.length === 0">no options provided</option>
+    <option value="" disabled *ngIf="!isLoading && optionEntries.length > 0 && !selectedKey">{{ placeholder }}</option>
+    <option *ngFor="let entry of optionEntries" [value]="entry[0]">{{ entry[1] }}</option>
+  </select>
+</div>
