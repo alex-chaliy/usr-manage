@@ -1,24 +1,25 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { of } from 'rxjs';
 
-import { UsersTable } from './users-table';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
+
 import { UserService } from '../../services/user-service';
+import { UsersTable } from './users-table';
 
 class MockUserService {
   getUsers() {
     return of({ data: [], total: 0 });
   }
   getPositions() {
-    return of({ data: new Map(), total: 0 });
+    return of({ data: [], total: 0 });
   }
   getLevels() {
-    return of({ data: new Map(), total: 0 });
+    return of({ data: [], total: 0 });
   }
   getTechs() {
-    return of({ data: new Map(), total: 0 });
+    return of({ data: [], total: 0 });
   }
   getEmploymentTypes() {
-    return of({ data: new Map(), total: 0 });
+    return of({ data: [], total: 0 });
   }
 }
 
@@ -80,14 +81,22 @@ describe('Users Table', () => {
     component.pageSize = 25;
     component.currentSortField = 'email';
     component.sortDirection = 'desc';
-    component.positionQuery = ['pos', 'dev'];
+    component.chosenPositionId = 'pos-1';
+    component.chosenLevelId = 'level-2';
+    component.chosenTechId = 'tech-3';
+    component.chosenEmploymentTypeId = 'emp-4';
+
     const filters = (component as unknown as { getFiltersObject: () => Record<string, unknown> }).getFiltersObject();
+
     expect(filters['fullNameQuery']).toBe('John');
     expect(filters['emailQuery']).toBe('example@x.com');
     expect(filters['page']).toBe(2);
     expect(filters['pageSize']).toBe(25);
     expect(filters['sortField']).toBe('email');
     expect(filters['sortDirection']).toBe('desc');
-    expect(filters['positionQuery']).toBe('dev');
+    expect(filters['positionQuery']).toBe('pos-1');
+    expect(filters['levelQuery']).toBe('level-2');
+    expect(filters['techQuery']).toBe('tech-3');
+    expect(filters['employmentTypeQuery']).toBe('emp-4');
   });
 });

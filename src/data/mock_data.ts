@@ -1,3 +1,5 @@
+import { TechSkillCategory } from '../app/models/TechSkill.model';
+
 export const data = {
   "meta": {
     "generatedAt": "2025-12-17T22:43:45.464102+00:00",
@@ -163,157 +165,157 @@ export const data = {
     {
       "id": "ae5d16f3-c097-41fa-b3e3-40e5e11de436",
       "name": "Java",
-      "category": "LANGUAGE"
+      "category": "LANGUAGE" as TechSkillCategory
     },
     {
       "id": "b48cbbe9-f7c7-4c46-a023-33c7731d7416",
       "name": "JavaScript",
-      "category": "LANGUAGE"
+      "category": "LANGUAGE" as TechSkillCategory
     },
     {
       "id": "920ff1c1-704e-434b-b346-2ad89d4b58bd",
       "name": "TypeScript",
-      "category": "LANGUAGE"
+      "category": "LANGUAGE" as TechSkillCategory
     },
     {
       "id": "f58d3648-b55b-4456-8748-b338f659d120",
       "name": "Python",
-      "category": "LANGUAGE"
+      "category": "LANGUAGE" as TechSkillCategory
     },
     {
       "id": "a416f947-9f12-45e9-b7c6-af174d038318",
       "name": "Kotlin",
-      "category": "LANGUAGE"
+      "category": "LANGUAGE" as TechSkillCategory
     },
     {
       "id": "f66746d8-18ea-4f43-aa96-267413e6d762",
       "name": "Dart",
-      "category": "LANGUAGE"
+      "category": "LANGUAGE" as TechSkillCategory
     },
     {
       "id": "94c11d16-d77d-41c3-bf14-77ea1af97854",
       "name": "SQL",
-      "category": "LANGUAGE"
+      "category": "LANGUAGE" as TechSkillCategory
     },
     {
       "id": "4036a4ec-38a0-4434-bbc4-05d98b7949c4",
       "name": "C#",
-      "category": "LANGUAGE"
+      "category": "LANGUAGE" as TechSkillCategory
     },
     {
       "id": "09f6e23c-8c39-4682-ae75-ea5db5c3dff9",
       "name": "Angular",
-      "category": "FRAMEWORK"
+      "category": "FRAMEWORK" as TechSkillCategory
     },
     {
       "id": "f2a2e6e1-47cf-4553-bc15-29192f39644e",
       "name": "React",
-      "category": "FRAMEWORK"
+      "category": "FRAMEWORK" as TechSkillCategory
     },
     {
       "id": "03277ccc-d18e-4b58-8071-7753a2bdcb34",
       "name": "Vue",
-      "category": "FRAMEWORK"
+      "category": "FRAMEWORK" as TechSkillCategory
     },
     {
       "id": "76242eec-a2a2-4fa6-ac04-133b81a55a6c",
       "name": "Spring Boot",
-      "category": "FRAMEWORK"
+      "category": "FRAMEWORK" as TechSkillCategory
     },
     {
       "id": "9bac49a2-bcaf-4639-a520-89870adff0cf",
       "name": ".NET",
-      "category": "FRAMEWORK"
+      "category": "FRAMEWORK" as TechSkillCategory
     },
     {
       "id": "2ea1be1a-be9b-4eb5-9883-aa4ee652ba36",
       "name": "Node.js",
-      "category": "RUNTIME"
+      "category": "RUNTIME" as TechSkillCategory
     },
     {
       "id": "8722b9e6-5452-4783-afdc-a3a5386c9964",
       "name": "Flutter",
-      "category": "FRAMEWORK"
+      "category": "FRAMEWORK" as TechSkillCategory
     },
     {
       "id": "8681ad1f-d318-432c-b90c-5944b8bed00d",
       "name": "Docker",
-      "category": "DEVOPS"
+      "category": "DEVOPS" as TechSkillCategory
     },
     {
       "id": "5f277bf5-0026-493e-9d01-127330ad34f8",
       "name": "Kubernetes",
-      "category": "DEVOPS"
+      "category": "DEVOPS" as TechSkillCategory
     },
     {
       "id": "39deecf4-2a16-45b4-aa6f-214791530d94",
       "name": "AWS",
-      "category": "CLOUD"
+      "category": "CLOUD" as TechSkillCategory
     },
     {
       "id": "a247b6b5-eace-4d6c-ad8a-d792e726c703",
       "name": "GCP",
-      "category": "CLOUD"
+      "category": "CLOUD" as TechSkillCategory
     },
     {
       "id": "f8fd59e5-4e89-4b9b-bd53-7ac4191f6dd0",
       "name": "Azure",
-      "category": "CLOUD"
+      "category": "CLOUD" as TechSkillCategory
     },
     {
       "id": "a303fb84-2b98-4c31-81eb-c61a565a9106",
       "name": "PostgreSQL",
-      "category": "DATABASE"
+      "category": "DATABASE" as TechSkillCategory
     },
     {
       "id": "fbd3dabb-17a3-4f4c-a202-5ac5529967a7",
       "name": "MySQL",
-      "category": "DATABASE"
+      "category": "DATABASE" as TechSkillCategory
     },
     {
       "id": "9fe4ff99-aab2-408f-83e8-300107775081",
       "name": "MongoDB",
-      "category": "DATABASE"
+      "category": "DATABASE" as TechSkillCategory
     },
     {
       "id": "d7725791-3b02-4a44-a5e7-897ffa03bda6",
       "name": "Redis",
-      "category": "DATABASE"
+      "category": "DATABASE" as TechSkillCategory
     },
     {
       "id": "1c832189-f8b9-473c-a5ea-cbcaa3569d27",
       "name": "Kafka",
-      "category": "INFRA"
+      "category": "INFRA" as TechSkillCategory
     },
     {
       "id": "9af036f2-5c0f-4ed5-823c-7433d6f86500",
       "name": "RabbitMQ",
-      "category": "INFRA"
+      "category": "INFRA" as TechSkillCategory
     },
     {
       "id": "e856e7f9-cd59-434a-a088-aa788bfd538d",
       "name": "Terraform",
-      "category": "DEVOPS"
+      "category": "DEVOPS" as TechSkillCategory
     },
     {
       "id": "833657c8-e456-4925-ac9d-57506956c36b",
       "name": "Git",
-      "category": "TOOLING"
+      "category": "TOOLING" as TechSkillCategory
     },
     {
       "id": "058bc680-865b-4f6c-b931-c6505a10fb2b",
       "name": "CI/CD",
-      "category": "TOOLING"
+      "category": "TOOLING" as TechSkillCategory
     },
     {
       "id": "1815566b-f623-4bf7-9103-13072ace3c59",
       "name": "Playwright",
-      "category": "TESTING"
+      "category": "TESTING" as TechSkillCategory
     },
     {
       "id": "a63824bd-074a-4268-a34e-94b25875cae9",
       "name": "Cypress",
-      "category": "TESTING"
+      "category": "TESTING" as TechSkillCategory
     }
   ],
   "employmentTypes": [
