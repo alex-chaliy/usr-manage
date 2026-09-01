@@ -1,6 +1,10 @@
+import { EmploymentType } from './EmploymentType.model';
+import { Level } from './Level.model';
+import { Position } from './Position.model';
 import { SortDirection } from './Sort.model';
+import { TechSkill } from './TechSkill.model';
 
-export interface User {
+export type User = {
   id: string;
   firstName: string;
   lastName: string;
@@ -8,9 +12,9 @@ export interface User {
   age: number;
   address: string;
   phone: string;
+  experienceYears: number;
   positionId: string;
   levelId: string;
-  experienceYears: number;
   primaryTechId: string;
   secondaryTechIds: string[];
   salaryMonthly: number;
@@ -19,20 +23,16 @@ export interface User {
   isActive: boolean;
 }
 
-export interface UserTableRow {
-  id: string;
-  fullName: string;
-  email: string;
-  position: string;
-  level: string;
-  primaryTech: string;
-  employmentType: string;
-  age: number;
-  salaryMonthly: number;
+export type UserAggrageted = User & {
+  position: Position | null;
+  level: Level | null;
+  primaryTech: TechSkill | null;
+  employmentType: EmploymentType | null;
+  secondaryTechs: TechSkill[] | null;
 }
 
 export type UserSortField =
-  'salaryMonthly' | 'age' | 'fullName' | 'firstName' | 'lastName' | 'email';
+  'salaryMonthly' | 'age' | 'firstName' | 'lastName' | 'email';
 
 export interface UserListFilters {
   fullNameQuery: string;

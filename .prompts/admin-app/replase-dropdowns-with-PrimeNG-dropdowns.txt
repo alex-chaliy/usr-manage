@@ -1,0 +1,42 @@
+replace dropdowns (app-custom-select) with PrimeNG dropdowns.
+
+Dropdowns: 
+- Filters: Position, Level, Primary Technology, Employment Type;
+- Page Size.
+
+Do it in UsersTable html and ts.
+
+----------
+
+1st phase. Filter dropdowns.
+
+I already implemented the whole flow for the Position Filter Dropdown
+and u need to do exactly the same with
+such filter dropdowns as Level, Primary Technology, Employment Type.
+
+2nd phase will be later. 
+
+----------
+
+2nd phase. Page Size dropdown.
+
+Page Size dropdown differs:
+- data options are not loaded from API with a service method.
+- data optioons are used from PAGE_SIZES from the `pagination.constants.ts`
+- filter doesn't have loading state, since we use hardcoded PAGE_SIZES options.
+- data options (PAGE_SIZES) is array of primitives.
+- DEFAULT_PAGE_SIZE is used as default page size.
+
+Integration (already implemented): 
+if we switch between page modes ('infinite_scroll' and 'pagination'),
+page size resets to DEFAULT_PAGE_SIZE.
+
+Note: I changed PAGE_SIZES data type from `Map<string, string>` to number[],
+and I removed DEFAULT_PAGE_SIZE_OPTION since it's not needed already.
+U need to fix that Page Size dropdown flow.
+
+-----------
+Fixes after 2nd phase execute:
+
+I don't need to keep pages sizes as `Array<{ label: string; value: number }>`. it should be `number[]`.
+

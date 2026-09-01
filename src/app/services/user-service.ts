@@ -1,43 +1,42 @@
 import { Injectable } from '@angular/core';
 import { delay, Observable, of } from 'rxjs';
 import { data } from '../../data/mock_data';
-import { User, UserListFilters, UserSortField, UserTableRow } from '../models/User.model';
+import { User, UserListFilters, UserSortField, UserAggrageted } from '../models/User.model';
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination.constants';
 import { ApiResponse } from '../models/ApiInteraction.model';
+import { Position } from '../models/Position.model';
+import { Level } from '../models/Level.model';
+import { TechSkill } from '../models/TechSkill.model';
+import { EmploymentType } from '../models/EmploymentType.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
-  private readonly positionMap = new Map(
-    data.positions.map((position) => [position.id, position.name]),
-  );
-  private readonly levelMap = new Map(data.levels.map((level) => [level.id, level.name]));
-  private readonly techMap = new Map(data.tech.map((tech) => [tech.id, tech.name]));
-  private readonly employmentTypeMap = new Map(
-    data.employmentTypes.map((employmentType) => [employmentType.id, employmentType.name]),
-  );
+  private readonly positionMap: Position[] = [...data.positions];
+  private readonly levelMap: Level[] = [...data.levels];
+  private readonly techMap: TechSkill[] = [...data.tech];
+  private readonly employmentTypeMap: EmploymentType[] = [...data.employmentTypes];
 
-  userList: UserTableRow[] = this.mapUsersData(data.users as User[]);
+  userList: UserAggrageted[] = this.mapUsersData(data.users as User[]);
 
-  private mapUsersData(users: User[]): UserTableRow[] {
+  private mapUsersData(users: User[]): UserAggrageted[] {
     return users.map((user) => ({
-      id: user.id,
-      fullName: `${user.firstName} ${user.lastName}`,
-      email: user.email,
-      position: this.positionMap.get(user.positionId) ?? 'Unknown',
-      level: this.levelMap.get(user.levelId) ?? 'Unknown',
-      primaryTech: this.techMap.get(user.primaryTechId) ?? 'Unknown',
-      employmentType: this.employmentTypeMap.get(user.employmentTypeId) ?? 'Unknown',
-      age: user.age,
-      salaryMonthly: user.salaryMonthly,
+      ...user,
+      position: this.positionMap.find((p) => p.id === user.positionId) || null,
+      level: this.levelMap.find((l) => l.id === user.levelId) || null,
+      primaryTech: this.techMap.find((t) => t.id === user.primaryTechId) || null,
+      secondaryTechs:
+        this.techMap.filter((t) =>
+          user.secondaryTechIds.some((userTechId) => t.id === userTechId),
+        ) || null,
+      employmentType: this.employmentTypeMap.find((et) => et.id === user.employmentTypeId) || null,
     }));
   }
 
-  getUsers(filters: UserListFilters): Observable<ApiResponse<UserTableRow[]>> {
-    return this.applyFilters(filters)
-      .pipe(delay(1000)); // Imitate network delay
+  getUsers(filters: UserListFilters): Observable<ApiResponse<UserAggrageted[]>> {
+    return this.applyFilters(filters).pipe(delay(1000)); // Imitate network delay
   }
 
-  private applyFilters(filters: UserListFilters): Observable<ApiResponse<UserTableRow[]>> {
+  private applyFilters(filters: UserListFilters): Observable<ApiResponse<UserAggrageted[]>> {
     if (!filters) {
       return of(this.slicePage(this.userList, 1, DEFAULT_PAGE_SIZE));
     }
@@ -70,10 +69,10 @@ export class UserService {
   }
 
   private slicePage(
-    userList: UserTableRow[],
+    userList: UserAggrageted[],
     page: number,
     pageSize: number,
-  ): ApiResponse<UserTableRow[]> {
+  ): ApiResponse<UserAggrageted[]> {
     const startIndex = (page - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     return {
@@ -84,15 +83,15 @@ export class UserService {
     };
   }
 
-  private searchUsersByFullName(users: UserTableRow[], fullName: string): UserTableRow[] {
-    const query = fullName.trim().toLowerCase();
+  private searchUsersByFullName(users: UserAggrageted[], fullName: string): UserAggrageted[] {
+    const query = fullName.toLowerCase();
     return users.filter((u) => {
-      const fullNameValue = (u.fullName || '').toLowerCase();
-      return !query || fullNameValue.includes(query);
+      const fullNameValue = `${u.firstName} ${u.lastName}`.toLowerCase();
+      return fullNameValue.includes(query);
     });
   }
 
-  private searchUsersByEmail(users: UserTableRow[], email: string): UserTableRow[] {
+  private searchUsersByEmail(users: UserAggrageted[], email: string): UserAggrageted[] {
     const query = email.trim().toLowerCase();
     return users.filter((u) => {
       const emailValue = (u.email || '').toLowerCase();
@@ -100,55 +99,36 @@ export class UserService {
     });
   }
 
-  private searchUsersByPosition(users: UserTableRow[], position: string): UserTableRow[] {
-    const query = position.trim().toLowerCase();
-    return users.filter((u) => {
-      const positionValue = (u.position || '').toLowerCase();
-      return !query || positionValue === query;
-    });
+  private searchUsersByPosition(users: UserAggrageted[], positionId: string): UserAggrageted[] {
+    return users.filter((u) => u.positionId === positionId);
   }
 
-  private searchUsersByLevel(users: UserTableRow[], level: string): UserTableRow[] {
-    const query = level.trim().toLowerCase();
-    return users.filter((u) => {
-      const levelValue = (u.level || '').toLowerCase();
-      return !query || levelValue === query;
-    });
+  private searchUsersByLevel(users: UserAggrageted[], levelId: string): UserAggrageted[] {
+    return users.filter((u) => u.levelId === levelId);
   }
 
-  private searchUsersByPrimaryTech(users: UserTableRow[], primaryTech: string): UserTableRow[] {
-    const query = primaryTech.trim().toLowerCase();
-    return users.filter((u) => {
-      const primaryTechValue = (u.primaryTech || '').toLowerCase();
-      return !query || primaryTechValue === query;
-    });
+  private searchUsersByPrimaryTech(
+    users: UserAggrageted[],
+    primaryTechId: string,
+  ): UserAggrageted[] {
+    return users.filter((u) => u.primaryTechId === primaryTechId);
   }
 
   private searchUsersByEmploymentType(
-    users: UserTableRow[],
-    employmentType: string,
-  ): UserTableRow[] {
-    const query = employmentType.trim().toLowerCase();
-    return users.filter((u) => {
-      const employmentTypeValue = (u.employmentType || '').toLowerCase();
-      return !query || employmentTypeValue === query;
-    });
+    users: UserAggrageted[],
+    employmentTypeId: string,
+  ): UserAggrageted[] {
+    return users.filter((u) => u.employmentTypeId === employmentTypeId);
   }
 
   private sortBy(
-    users: UserTableRow[],
+    users: UserAggrageted[],
     field: UserSortField,
     order: 'asc' | 'desc',
-  ): UserTableRow[] {
+  ): UserAggrageted[] {
     return [...users].sort((a, b) => {
-      const valueA =
-        field === 'fullName' || field === 'firstName' || field === 'lastName'
-          ? a.fullName
-          : a[field];
-      const valueB =
-        field === 'fullName' || field === 'firstName' || field === 'lastName'
-          ? b.fullName
-          : b[field];
+      const valueA = a[field];
+      const valueB = b[field];
 
       if (typeof valueA === 'string' && typeof valueB === 'string') {
         const comparison = valueA.localeCompare(valueB);
@@ -160,39 +140,39 @@ export class UserService {
     });
   }
 
-  getPositions(): Observable<ApiResponse<Map<string, string>>> {
+  getPositions(): Observable<ApiResponse<Position[]>> {
     return of({
       data: this.positionMap,
       offset: 0,
-      limit: this.positionMap.size,
-      total: this.positionMap.size,
+      limit: this.positionMap?.length,
+      total: this.positionMap.length,
     }).pipe(delay(1000)); // Imitate network delay
   }
 
-  getLevels(): Observable<ApiResponse<Map<string, string>>> {
+  getLevels(): Observable<ApiResponse<Level[]>> {
     return of({
       data: this.levelMap,
       offset: 0,
-      limit: this.levelMap.size,
-      total: this.levelMap.size,
+      limit: this.levelMap.length,
+      total: this.levelMap.length,
     }).pipe(delay(1200)); // Imitate network delay
   }
 
-  getTechs(): Observable<ApiResponse<Map<string, string>>> {
+  getTechs(): Observable<ApiResponse<TechSkill[]>> {
     return of({
       data: this.techMap,
       offset: 0,
-      limit: this.techMap.size,
-      total: this.techMap.size,
+      limit: this.techMap.length,
+      total: this.techMap.length,
     }).pipe(delay(500)); // Imitate network delay
   }
 
-  getEmploymentTypes(): Observable<ApiResponse<Map<string, string>>> {
+  getEmploymentTypes(): Observable<ApiResponse<EmploymentType[]>> {
     return of({
       data: this.employmentTypeMap,
       offset: 0,
-      limit: this.employmentTypeMap.size,
-      total: this.employmentTypeMap.size,
+      limit: this.employmentTypeMap.length,
+      total: this.employmentTypeMap.length,
     }).pipe(delay(2000)); // Imitate network delay
   }
 }

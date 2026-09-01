@@ -1,0 +1,10 @@
+implement app routing with lazy loading:
+
+/users - UsersPageComponent, it's default routes
+
+/ - redirect to /users
+
+/unexisted_route_asdfdf - for unexisted routes redirect to NotFoundPageComponent
+
+Notes:
+We use Angular 22, and all components are `standalone` by default.

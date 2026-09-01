@@ -36,41 +36,53 @@
   </div>
 
   <div class="filters-row filters-row--custom-selects">
-    <app-custom-select
-      [optionsList]="positionMap"
-      [valueOption]="positionQuery"
-      [placeholder]="'Select position'"
-      [isLoading]="positionMapAsyncState === 'loading'"
-      [loadingPlaceholder]="'Loading positions...'"
-      (selectionChange)="onSelectPositionChange($event)"
-    ></app-custom-select>
+    <p-select
+      [options]="positionMap"
+      [ngModel]="chosenPositionId"
+      (ngModelChange)="onSelectPositionChange($event)"
+      optionLabel="name"
+      optionValue="id"
+      [placeholder]="
+        positionMapAsyncState === 'loading' ? 'Loading positions...' : 'Select position'
+      "
+      [loading]="positionMapAsyncState === 'loading'"
+    />
 
-    <app-custom-select
-      [optionsList]="levelMap"
-      [valueOption]="levelQuery"
-      [placeholder]="'Select level'"
-      [isLoading]="levelMapAsyncState === 'loading'"
-      [loadingPlaceholder]="'Loading levels...'"
-      (selectionChange)="onSelectLevelChange($event)"
-    ></app-custom-select>
+    <p-select
+      [options]="levelMap"
+      [ngModel]="chosenLevelId"
+      (ngModelChange)="onSelectLevelChange($event)"
+      optionLabel="name"
+      optionValue="id"
+      [placeholder]="
+        levelMapAsyncState === 'loading' ? 'Loading levels...' : 'Select level'
+      "
+      [loading]="levelMapAsyncState === 'loading'"
+    />
 
-    <app-custom-select
-      [optionsList]="techMap"
-      [valueOption]="techQuery"
-      [placeholder]="'Select primary technology'"
-      [isLoading]="techMapAsyncState === 'loading'"
-      [loadingPlaceholder]="'Loading technologies...'"
-      (selectionChange)="onSelectTechChange($event)"
-    ></app-custom-select>
+    <p-select
+      [options]="techMap"
+      [ngModel]="chosenTechId"
+      (ngModelChange)="onSelectTechChange($event)"
+      optionLabel="name"
+      optionValue="id"
+      [placeholder]="
+        techMapAsyncState === 'loading' ? 'Loading technologies...' : 'Select primary technology'
+      "
+      [loading]="techMapAsyncState === 'loading'"
+    />
 
-    <app-custom-select
-      [optionsList]="employmentTypeMap"
-      [valueOption]="employmentTypeQuery"
-      [placeholder]="'Select employment type'"
-      [isLoading]="employmentTypeMapAsyncState === 'loading'"
-      [loadingPlaceholder]="'Loading employment types...'"
-      (selectionChange)="onSelectEmploymentTypeChange($event)"
-    ></app-custom-select>
+    <p-select
+      [options]="employmentTypeMap"
+      [ngModel]="chosenEmploymentTypeId"
+      (ngModelChange)="onSelectEmploymentTypeChange($event)"
+      optionLabel="name"
+      optionValue="id"
+      [placeholder]="
+        employmentTypeMapAsyncState === 'loading' ? 'Loading employment types...' : 'Select employment type'
+      "
+      [loading]="employmentTypeMapAsyncState === 'loading'"
+    />
   </div>
 
   @if (usersAsyncState === 'loading') {
@@ -92,11 +104,13 @@
   }
 
   <div class="pagination-controls" *ngIf="paginationMode === 'pagination'">
-    <app-custom-select
-      [optionsList]="pageSizeMap"
-      [valueOption]="pageSizeOption"
-      (selectionChange)="onSelectPageSizeChange($event)"
-    ></app-custom-select>
+    <p-select
+      [options]="pageSizeOptions"
+      [ngModel]="pageSize"
+      (ngModelChange)="onSelectPageSizeChange($event)"
+      [placeholder]="'Page size'"
+    />
+
     <button mat-stroked-button type="button" [disabled]="!hasPreviousPage" (click)="previousPage()">
       Previous
     </button>
@@ -125,14 +139,14 @@
   >
     <ng-container matColumnDef="fullName">
       <th mat-header-cell *matHeaderCellDef>
-        <button type="button" class="sort-button" (click)="sortTable('lastName')">
+        <button type="button" class="sort-button" (click)="sortTable('firstName')">
           <span>Full name</span>
           <span class="sort-icon">{{
-            currentSortField === 'lastName' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+            currentSortField === 'firstName' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
           }}</span>
         </button>
       </th>
-      <td mat-cell *matCellDef="let row">{{ row.fullName }}</td>
+      <td mat-cell *matCellDef="let row">{{ row.firstName }} {{ row.lastName }}</td>
     </ng-container>
 
     <ng-container matColumnDef="email">
@@ -149,22 +163,22 @@
 
     <ng-container matColumnDef="position">
       <th mat-header-cell *matHeaderCellDef>Position</th>
-      <td mat-cell *matCellDef="let row">{{ row.position }}</td>
+      <td mat-cell *matCellDef="let row">{{ row.position?.name || 'N/A' }}</td>
     </ng-container>
 
     <ng-container matColumnDef="level">
       <th mat-header-cell *matHeaderCellDef>Level</th>
-      <td mat-cell *matCellDef="let row">{{ row.level }}</td>
+      <td mat-cell *matCellDef="let row">{{ row.level?.name || 'N/A' }}</td>
     </ng-container>
 
     <ng-container matColumnDef="primaryTech">
       <th mat-header-cell *matHeaderCellDef>Primary technology</th>
-      <td mat-cell *matCellDef="let row">{{ row.primaryTech }}</td>
+      <td mat-cell *matCellDef="let row">{{ row.primaryTech?.name || 'N/A' }}</td>
     </ng-container>
 
     <ng-container matColumnDef="employmentType">
       <th mat-header-cell *matHeaderCellDef>Employment type</th>
-      <td mat-cell *matCellDef="let row">{{ row.employmentType }}</td>
+      <td mat-cell *matCellDef="let row">{{ row.employmentType?.name || 'N/A' }}</td>
     </ng-container>
 
     <ng-container matColumnDef="age">
@@ -211,10 +225,10 @@
     <thead>
       <tr>
         <th>
-          <button type="button" class="sort-button" (click)="sortTable('lastName')">
+          <button type="button" class="sort-button" (click)="sortTable('firstName')">
             <span>Full name</span>
             <span class="sort-icon">{{
-              currentSortField === 'lastName' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
+              currentSortField === 'firstName' ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'
             }}</span>
           </button>
         </th>
@@ -269,7 +283,7 @@
           class="virtual-users-row"
           [style.height.px]="virtualRowHeight"
         >
-          <td>{{ row.fullName }}</td>
+          <td>{{ row.firstName }} {{ row.lastName }}</td>
           <td>{{ row.email }}</td>
           <td>{{ row.position }}</td>
           <td>{{ row.level }}</td>

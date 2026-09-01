@@ -1,20 +1,27 @@
-import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit, ViewChild } from '@angular/core';
-import { MatTableModule } from '@angular/material/table';
-import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
-import { UserListFilters, UserSortField, UserTableRow } from '../../models/User.model';
+import { SelectModule } from 'primeng/select';
+
+import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
+import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { FormsModule } from '@angular/forms';
+import { MatTableModule } from '@angular/material/table';
+
+import {
+    TogglePaginationMode
+} from '../../components/toggle-pagination-mode/toggle-pagination-mode';
+import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '../../constants/pagination.constants';
+import { ApiResponse, AsyncState } from '../../models/ApiInteraction.model';
+import { EmploymentType } from '../../models/EmploymentType.model';
+import { Level } from '../../models/Level.model';
 import { PaginationMode } from '../../models/Pagination.model';
+import { Position } from '../../models/Position.model';
+import { SortDirection } from '../../models/Sort.model';
+import { TechSkill } from '../../models/TechSkill.model';
+import { UserAggrageted, UserListFilters, UserSortField } from '../../models/User.model';
 import { CurrencyPipe } from '../../pipes/currency.pipe';
 import { UserService } from '../../services/user-service';
-import { FormsModule } from '@angular/forms';
-import { TogglePaginationMode } from '../../components/toggle-pagination-mode/toggle-pagination-mode';
-import { DEFAULT_PAGE_SIZE, DEFAULT_PAGE_SIZE_OPTION } from '../../constants/pagination.constants';
-import { PAGE_SIZE_MAP } from '../../constants/pagination.constants';
-import { CustomSelect } from '../../components/custom-select/custom-select';
-import { SortDirection } from '../../models/Sort.model';
-import { ApiResponse, AsyncState } from '../../models/ApiInteraction.model';
-import { CommonModule } from '@angular/common';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-users-table',
@@ -26,7 +33,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
     InfiniteScrollDirective,
     CurrencyPipe,
     TogglePaginationMode,
-    CustomSelect,
+    SelectModule
   ],
   templateUrl: './users-table.html',
   styleUrl: './users-table.scss',
@@ -57,30 +64,28 @@ export class UsersTable implements OnInit {
   sortDirection: SortDirection = 'asc';
   page = 1;
   pageSize = DEFAULT_PAGE_SIZE;
-  pageSizeMap: Map<string, string> = PAGE_SIZE_MAP;
+  pageSizeOptions: number[] = [...PAGE_SIZES];
 
-  positionQuery = null as unknown as [string, string] | null;
-  levelQuery = null as unknown as [string, string] | null;
-  techQuery = null as unknown as [string, string] | null;
-  employmentTypeQuery = null as unknown as [string, string] | null;
+  chosenPositionId = '';
+  chosenLevelId = '';
+  chosenTechId = '';
+  chosenEmploymentTypeId = '';
 
-  positionMap = null as unknown as Map<string, string>;
-  levelMap = null as unknown as Map<string, string>;
-  techMap = null as unknown as Map<string, string>;
-  employmentTypeMap = null as unknown as Map<string, string>;
+  positionMap = null as unknown as Position[];
+  levelMap = null as unknown as Level[];
+  techMap = null as unknown as TechSkill[];
+  employmentTypeMap = null as unknown as EmploymentType[];
 
   totalResults = 0;
-  allUsers: UserTableRow[] = [];
+  allUsers: UserAggrageted[] = [];
 
-  usersAsyncState: AsyncState = 'loading';
-  positionMapAsyncState: AsyncState = 'loading';
-  levelMapAsyncState: AsyncState = 'loading';
-  techMapAsyncState: AsyncState = 'loading';
-  employmentTypeMapAsyncState: AsyncState = 'loading';
+  usersAsyncState: AsyncState = 'idle';
+  positionMapAsyncState: AsyncState = 'idle';
+  levelMapAsyncState: AsyncState = 'idle';
+  techMapAsyncState: AsyncState = 'idle';
+  employmentTypeMapAsyncState: AsyncState = 'idle';
 
   keepCurrentRender = false;
-
-  pageSizeOption = DEFAULT_PAGE_SIZE_OPTION;
 
   ngOnInit(): void {
     this.getFilteredUsers();
@@ -109,7 +114,7 @@ export class UsersTable implements OnInit {
         takeUntilDestroyed(this.destroyRef), // Automatically cleans up on destroy
       )
       .subscribe({
-        next: (res: ApiResponse<UserTableRow[]>) => {
+        next: (res: ApiResponse<UserAggrageted[]>) => {
           if (!this.allUsers) {
             this.allUsers = [];
           }
@@ -142,7 +147,6 @@ export class UsersTable implements OnInit {
     console.log('Pagination mode changed:', mode);
     this.page = 1;
     this.pageSize = DEFAULT_PAGE_SIZE;
-    this.pageSizeOption = [...DEFAULT_PAGE_SIZE_OPTION]; // reset page-size custom-select
     this.getFilteredUsers();
   }
 
@@ -176,10 +180,10 @@ export class UsersTable implements OnInit {
     this.page = 1;
     this.currentSortField = null;
     this.sortDirection = 'asc';
-    this.positionQuery = null;
-    this.levelQuery = null;
-    this.techQuery = null;
-    this.employmentTypeQuery = null;
+    this.chosenPositionId = '';
+    this.chosenLevelId = '';
+    this.chosenTechId = '';
+    this.chosenEmploymentTypeId = '';
 
     this.getFilteredUsers();
   }
@@ -193,39 +197,38 @@ export class UsersTable implements OnInit {
       sortField: this.currentSortField,
       sortDirection: this.sortDirection,
 
-      positionQuery: this.positionQuery ? this.positionQuery[1] : '',
-      levelQuery: this.levelQuery ? this.levelQuery[1] : '',
-      techQuery: this.techQuery ? this.techQuery[1] : '',
-      employmentTypeQuery: this.employmentTypeQuery ? this.employmentTypeQuery[1] : '',
+      positionQuery: this.chosenPositionId,
+      levelQuery: this.chosenLevelId,
+      techQuery: this.chosenTechId,
+      employmentTypeQuery: this.chosenEmploymentTypeId,
     };
   }
 
-  onSelectPositionChange(selectedOption: [string, string] | null): void {
-    this.positionQuery = selectedOption;
+  onSelectPositionChange(chosenPositionId: string): void {
+    this.chosenPositionId = chosenPositionId;
     this.getFilteredUsers();
   }
 
-  onSelectLevelChange(selectedOption: [string, string] | null): void {
-    this.levelQuery = selectedOption;
+  onSelectLevelChange(chosenLevelId: string): void {
+    this.chosenLevelId = chosenLevelId;
     this.getFilteredUsers();
   }
 
-  onSelectTechChange(selectedOption: [string, string] | null): void {
-    this.techQuery = selectedOption;
+  onSelectTechChange(chosenTechId: string): void {
+    this.chosenTechId = chosenTechId;
     this.getFilteredUsers();
   }
 
-  onSelectEmploymentTypeChange(selectedOption: [string, string] | null): void {
-    this.employmentTypeQuery = selectedOption;
+  onSelectEmploymentTypeChange(chosenEmploymentTypeId: string): void {
+    this.chosenEmploymentTypeId = chosenEmploymentTypeId;
     this.getFilteredUsers();
   }
 
-  onSelectPageSizeChange(selection: [string, string] | null): void {
-    if (!selection) {
+  onSelectPageSizeChange(selection: number | null): void {
+    if (selection === null || selection === undefined) {
       return;
     }
-    const [, value] = selection;
-    const numeric = Number(value);
+    const numeric = Number(selection);
     if (!Number.isNaN(numeric) && numeric > 0) {
       this.pageSize = numeric;
       this.page = 1;
@@ -246,7 +249,7 @@ export class UsersTable implements OnInit {
       .getPositions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res: ApiResponse<Map<string, string>>) => {
+        next: (res: ApiResponse<Position[]>) => {
           this.positionMap = res.data;
           this.positionMapAsyncState = 'success';
           this.cdk.detectChanges();
@@ -264,7 +267,7 @@ export class UsersTable implements OnInit {
       .getLevels()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res: ApiResponse<Map<string, string>>) => {
+        next: (res: ApiResponse<Level[]>) => {
           this.levelMap = res.data;
           this.levelMapAsyncState = 'success';
           this.cdk.detectChanges();
@@ -282,7 +285,7 @@ export class UsersTable implements OnInit {
       .getTechs()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res: ApiResponse<Map<string, string>>) => {
+        next: (res: ApiResponse<TechSkill[]>) => {
           this.techMap = res.data;
           this.techMapAsyncState = 'success';
           this.cdk.detectChanges();
@@ -300,7 +303,7 @@ export class UsersTable implements OnInit {
       .getEmploymentTypes()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res: ApiResponse<Map<string, string>>) => {
+        next: (res: ApiResponse<EmploymentType[]>) => {
           this.employmentTypeMap = res.data;
           this.employmentTypeMapAsyncState = 'success';
           this.cdk.detectChanges();
@@ -322,7 +325,7 @@ export class UsersTable implements OnInit {
     this.getFilteredUsers(true, true);
   }
 
-  trackByUser(_index: number, row: UserTableRow): string {
+  trackByUser(_index: number, row: UserAggrageted): string {
     return row.id;
   }
 }

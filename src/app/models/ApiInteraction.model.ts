@@ -5,4 +5,5 @@ export interface ApiResponse<T> {
   total: number;
 }
 
-export type AsyncState = 'loading' | 'success' | 'error';
+// 'idle' nothing tried to be loaded; initial state
+export type AsyncState = 'idle' | 'loading' | 'success' | 'error';
