@@ -1,13 +1,15 @@
-import { Injectable } from '@angular/core';
 import { delay, Observable, of } from 'rxjs';
+
+import { Injectable } from '@angular/core';
+
 import { data } from '../../data/mock_data';
-import { User, UserListFilters, UserSortField, UserAggrageted } from '../models/User.model';
 import { DEFAULT_PAGE_SIZE } from '../constants/pagination.constants';
 import { ApiResponse } from '../models/ApiInteraction.model';
-import { Position } from '../models/Position.model';
-import { Level } from '../models/Level.model';
-import { TechSkill } from '../models/TechSkill.model';
 import { EmploymentType } from '../models/EmploymentType.model';
+import { Level } from '../models/Level.model';
+import { Position } from '../models/Position.model';
+import { TechSkill } from '../models/TechSkill.model';
+import { User, UserAggrageted, UserListFilters, UserSortField } from '../models/User.model';
 
 @Injectable({ providedIn: 'root' })
 export class UserService {
@@ -33,7 +35,7 @@ export class UserService {
   }
 
   getUsers(filters: UserListFilters): Observable<ApiResponse<UserAggrageted[]>> {
-    return this.applyFilters(filters).pipe(delay(1000)); // Imitate network delay
+    return this.applyFilters(filters).pipe(delay(600)); // Imitate network delay
   }
 
   private applyFilters(filters: UserListFilters): Observable<ApiResponse<UserAggrageted[]>> {

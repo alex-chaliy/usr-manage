@@ -1,4 +1,6 @@
 import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
+import { ButtonDirective } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
 
 import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
@@ -9,18 +11,16 @@ import { FormsModule } from '@angular/forms';
 import { MatTableModule } from '@angular/material/table';
 
 import {
-    TogglePaginationMode
-} from '../../components/toggle-pagination-mode/toggle-pagination-mode';
+  InfiniteScrollToggler
+} from '../../components/infinite-scroll-toggler/infinite-scroll-toggler';
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '../../constants/pagination.constants';
 import { ApiResponse, AsyncState } from '../../models/ApiInteraction.model';
 import { EmploymentType } from '../../models/EmploymentType.model';
 import { Level } from '../../models/Level.model';
-import { PaginationMode } from '../../models/Pagination.model';
 import { Position } from '../../models/Position.model';
 import { SortDirection } from '../../models/Sort.model';
 import { TechSkill } from '../../models/TechSkill.model';
 import { UserAggrageted, UserListFilters, UserSortField } from '../../models/User.model';
-import { CurrencyPipe } from '../../pipes/currency.pipe';
 import { UserService } from '../../services/user-service';
 
 @Component({
@@ -28,21 +28,25 @@ import { UserService } from '../../services/user-service';
   imports: [
     CommonModule,
     FormsModule,
+
     MatTableModule,
     ScrollingModule,
     InfiniteScrollDirective,
-    CurrencyPipe,
-    TogglePaginationMode,
-    SelectModule
+
+    InfiniteScrollToggler,
+
+    SelectModule,
+    InputTextModule,
+    ButtonDirective,
   ],
   templateUrl: './users-table.html',
   styleUrl: './users-table.scss',
 })
 export class UsersTable implements OnInit {
   private readonly userService = inject(UserService);
-  private readonly cdk = inject(ChangeDetectorRef);
+  private readonly cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
-  
+
   @ViewChild(CdkVirtualScrollViewport) private viewport?: CdkVirtualScrollViewport;
   readonly virtualRowHeight = 56;
 
@@ -57,10 +61,12 @@ export class UsersTable implements OnInit {
     'salaryMonthly',
   ];
 
+  isInfiniteMode = false;
+
   fullNameQuery = '';
   emailQuery = '';
   currentSortField: UserSortField | null = null;
-  paginationMode: PaginationMode = 'pagination';
+
   sortDirection: SortDirection = 'asc';
   page = 1;
   pageSize = DEFAULT_PAGE_SIZE;
@@ -98,7 +104,7 @@ export class UsersTable implements OnInit {
    * to say shortly, do not reset page number to 1,
    * and keep current render of data-table until we recieve the next page data.
    * `keepPage = true` is used when sorting or navigating between pages,
-   * that helps to avoid ui blink. 
+   * that helps to avoid ui blink.
    * @param sumChunk - if true, don't wipe users-list with new chunk (next page data),
    * but add new chunk to existed users-list instead.
    * `sumChunk = true` needed for infinite scroll.
@@ -121,7 +127,7 @@ export class UsersTable implements OnInit {
           this.usersAsyncState = 'success';
           this.allUsers = sumChunk ? [...this.allUsers, ...res.data] : res.data;
           this.totalResults = res.total;
-          this.cdk.detectChanges(); // Ensure the view updates after data changes
+          this.cdr.detectChanges(); // Ensure the view updates after data changes
           this.viewport?.checkViewportSize();
         },
         error: (err) => {
@@ -143,8 +149,8 @@ export class UsersTable implements OnInit {
     return this.page < this.totalPages;
   }
 
-  onPaginationModeChange(mode: PaginationMode): void {
-    console.log('Pagination mode changed:', mode);
+  onInfiniteModeChange(isInfinite: boolean): void {
+    this.isInfiniteMode = isInfinite;
     this.page = 1;
     this.pageSize = DEFAULT_PAGE_SIZE;
     this.getFilteredUsers();
@@ -252,7 +258,7 @@ export class UsersTable implements OnInit {
         next: (res: ApiResponse<Position[]>) => {
           this.positionMap = res.data;
           this.positionMapAsyncState = 'success';
-          this.cdk.detectChanges();
+          this.cdr.detectChanges();
         },
         error: (err) => {
           this.positionMapAsyncState = 'error';
@@ -270,7 +276,7 @@ export class UsersTable implements OnInit {
         next: (res: ApiResponse<Level[]>) => {
           this.levelMap = res.data;
           this.levelMapAsyncState = 'success';
-          this.cdk.detectChanges();
+          this.cdr.detectChanges();
         },
         error: (err) => {
           this.levelMapAsyncState = 'error';
@@ -288,7 +294,7 @@ export class UsersTable implements OnInit {
         next: (res: ApiResponse<TechSkill[]>) => {
           this.techMap = res.data;
           this.techMapAsyncState = 'success';
-          this.cdk.detectChanges();
+          this.cdr.detectChanges();
         },
         error: (err) => {
           this.techMapAsyncState = 'error';
@@ -306,7 +312,7 @@ export class UsersTable implements OnInit {
         next: (res: ApiResponse<EmploymentType[]>) => {
           this.employmentTypeMap = res.data;
           this.employmentTypeMapAsyncState = 'success';
-          this.cdk.detectChanges();
+          this.cdr.detectChanges();
         },
         error: (err) => {
           this.employmentTypeMapAsyncState = 'error';

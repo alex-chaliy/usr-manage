@@ -1,12 +1,13 @@
 <div class="table-wrapper">
   <div class="top-controls">
-    <app-toggle-pagination-mode
-      [(mode)]="paginationMode"
-      (modeChange)="onPaginationModeChange($event)"
-    ></app-toggle-pagination-mode>
+    <app-infinite-scroll-toggler
+      [isInfinite]="isInfiniteMode"
+      (isInfiniteChange)="onInfiniteModeChange($event)"
+    >
+    </app-infinite-scroll-toggler>
 
     <div class="pagination-summary">
-      <span *ngIf="paginationMode === 'pagination'">Page {{ page }}</span>
+      <span *ngIf="!isInfiniteMode">Page {{ page }}</span>
       <span>Total results: {{ totalResults }}</span>
     </div>
   </div>
@@ -15,6 +16,7 @@
     <label class="field-group">
       <span>Full Name</span>
       <input
+        pInputText
         type="text"
         [(ngModel)]="fullNameQuery"
         (ngModelChange)="getFilteredUsers()"
@@ -25,6 +27,7 @@
     <label class="field-group">
       <span>Email</span>
       <input
+        pInputText
         type="text"
         [(ngModel)]="emailQuery"
         (ngModelChange)="getFilteredUsers()"
@@ -32,7 +35,15 @@
       />
     </label>
 
-    <button type="button" class="reset-button" (click)="resetFilters()">Reset</button>
+    <button
+      pButton
+      severity="contrast"
+      type="button"
+      class="reset-button"
+      (click)="resetFilters()"
+    >
+      Reset
+    </button>
   </div>
 
   <div class="filters-row filters-row--custom-selects">
@@ -54,9 +65,7 @@
       (ngModelChange)="onSelectLevelChange($event)"
       optionLabel="name"
       optionValue="id"
-      [placeholder]="
-        levelMapAsyncState === 'loading' ? 'Loading levels...' : 'Select level'
-      "
+      [placeholder]="levelMapAsyncState === 'loading' ? 'Loading levels...' : 'Select level'"
       [loading]="levelMapAsyncState === 'loading'"
     />
 
@@ -79,7 +88,9 @@
       optionLabel="name"
       optionValue="id"
       [placeholder]="
-        employmentTypeMapAsyncState === 'loading' ? 'Loading employment types...' : 'Select employment type'
+        employmentTypeMapAsyncState === 'loading'
+          ? 'Loading employment types...'
+          : 'Select employment type'
       "
       [loading]="employmentTypeMapAsyncState === 'loading'"
     />
@@ -96,14 +107,14 @@
   }
 
   @if (usersAsyncState === 'success' || keepCurrentRender) {
-    @if (paginationMode === 'infinite_scroll') {
+    @if (isInfiniteMode) {
       <ng-template [ngTemplateOutlet]="infiniteUsersTable"></ng-template>
     } @else {
       <ng-template [ngTemplateOutlet]="usersTable"></ng-template>
     }
   }
 
-  <div class="pagination-controls" *ngIf="paginationMode === 'pagination'">
+  <div class="pagination-controls" *ngIf="!isInfiniteMode">
     <p-select
       [options]="pageSizeOptions"
       [ngModel]="pageSize"
@@ -111,15 +122,13 @@
       [placeholder]="'Page size'"
     />
 
-    <button mat-stroked-button type="button" [disabled]="!hasPreviousPage" (click)="previousPage()">
+    <button pButton type="button" [disabled]="!hasPreviousPage" (click)="previousPage()">
       Previous
     </button>
 
     <span>Page {{ page }} of {{ totalPages }}</span>
 
-    <button mat-stroked-button type="button" [disabled]="!hasNextPage" (click)="nextPage()">
-      Next
-    </button>
+    <button pButton type="button" [disabled]="!hasNextPage" (click)="nextPage()">Next</button>
   </div>
 </div>
 
@@ -203,7 +212,7 @@
         </button>
       </th>
       <td mat-cell class="col-salary" *matCellDef="let row">
-        {{ row.salaryMonthly | currency: 'EUR' }}
+        {{ row.salaryMonthly }}
       </td>
     </ng-container>
 
@@ -290,7 +299,7 @@
           <td>{{ row.primaryTech }}</td>
           <td>{{ row.employmentType }}</td>
           <td>{{ row.age }}</td>
-          <td>{{ row.salaryMonthly | currency: 'EUR' }}</td>
+          <td>{{ row.salaryMonthly }}</td>
         </tr>
       </cdk-virtual-scroll-viewport>
     </tbody>

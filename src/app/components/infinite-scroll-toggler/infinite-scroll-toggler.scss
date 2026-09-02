@@ -1,0 +1,10 @@
+.infinite-mode-toggler {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+
+  &_label {
+    margin-right: 12px;
+    cursor: pointer;
+  }
+}

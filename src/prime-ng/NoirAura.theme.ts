@@ -3,7 +3,7 @@ import Aura from '@primeuix/themes/aura';
 
 export const NoirAuraThemePreset = definePreset(Aura, {
   semantic: {
-    primary: palette('{noir}'),
-    surface: palette('{slate}')
-  }
+    primary: palette('{zinc}'),
+    surface: palette('{slate}'),
+  },
 });
