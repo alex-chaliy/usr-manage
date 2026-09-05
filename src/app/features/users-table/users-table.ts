@@ -1,14 +1,14 @@
-import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
+// import { TableLazyLoadEvent } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { TableModule } from 'primeng/table';
 
-import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit, ViewChild } from '@angular/core';
+import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { MatTableModule } from '@angular/material/table';
+import { PIcon } from '@primeicons/angular/p-icon';
 
 import {
   InfiniteScrollToggler
@@ -17,11 +17,15 @@ import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '../../constants/pagination.consta
 import { ApiResponse, AsyncState } from '../../models/ApiInteraction.model';
 import { EmploymentType } from '../../models/EmploymentType.model';
 import { Level } from '../../models/Level.model';
+import { LoadStrategyConfig } from '../../models/LoadStrategyConfig.model';
 import { Position } from '../../models/Position.model';
 import { SortDirection } from '../../models/Sort.model';
+import { SortIconType } from '../../models/SortIcon.model';
 import { TechSkill } from '../../models/TechSkill.model';
 import { UserAggrageted, UserListFilters, UserSortField } from '../../models/User.model';
 import { UserService } from '../../services/user-service';
+
+const PrimeNGIconImports = [PIcon];
 
 @Component({
   selector: 'app-users-table',
@@ -29,15 +33,14 @@ import { UserService } from '../../services/user-service';
     CommonModule,
     FormsModule,
 
-    MatTableModule,
-    ScrollingModule,
-    InfiniteScrollDirective,
-
     InfiniteScrollToggler,
 
     SelectModule,
     InputTextModule,
     ButtonDirective,
+
+    TableModule,
+    ...PrimeNGIconImports,
   ],
   templateUrl: './users-table.html',
   styleUrl: './users-table.scss',
@@ -47,24 +50,11 @@ export class UsersTable implements OnInit {
   private readonly cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
 
-  @ViewChild(CdkVirtualScrollViewport) private viewport?: CdkVirtualScrollViewport;
-  readonly virtualRowHeight = 56;
-
-  readonly displayedColumns = [
-    'fullName',
-    'email',
-    'position',
-    'level',
-    'primaryTech',
-    'employmentType',
-    'age',
-    'salaryMonthly',
-  ];
-
   isInfiniteMode = false;
 
   fullNameQuery = '';
   emailQuery = '';
+
   currentSortField: UserSortField | null = null;
 
   sortDirection: SortDirection = 'asc';
@@ -83,7 +73,7 @@ export class UsersTable implements OnInit {
   employmentTypeMap = null as unknown as EmploymentType[];
 
   totalResults = 0;
-  allUsers: UserAggrageted[] = [];
+  usersData: UserAggrageted[] = [];
 
   usersAsyncState: AsyncState = 'idle';
   positionMapAsyncState: AsyncState = 'idle';
@@ -91,29 +81,23 @@ export class UsersTable implements OnInit {
   techMapAsyncState: AsyncState = 'idle';
   employmentTypeMapAsyncState: AsyncState = 'idle';
 
-  keepCurrentRender = false;
+  keepRenderUntilChanged = false;
 
   ngOnInit(): void {
     this.getFilteredUsers();
     this.getSelectOptions();
   }
 
-  /**
-   * @param keepPage - if true, keeps current render of data-table and current page number.
-   * current page number can be increased/decreased from outside, but it doesn't reset page number to 1.
-   * to say shortly, do not reset page number to 1,
-   * and keep current render of data-table until we recieve the next page data.
-   * `keepPage = true` is used when sorting or navigating between pages,
-   * that helps to avoid ui blink.
-   * @param sumChunk - if true, don't wipe users-list with new chunk (next page data),
-   * but add new chunk to existed users-list instead.
-   * `sumChunk = true` needed for infinite scroll.
-   * `sumChunk = false` works with classic pagination.
-   */
-  getFilteredUsers(keepPage = false, sumChunk = false): void {
+  getFilteredUsers(
+    lsc: LoadStrategyConfig = {
+      keepPage: false,
+      keepRenderUntilChanged: false,
+      sumChunk: false,
+    },
+  ): void {
     this.usersAsyncState = 'loading';
-    this.keepCurrentRender = keepPage;
-    this.page = keepPage ? this.page : 1;
+    this.keepRenderUntilChanged = lsc.keepRenderUntilChanged;
+    this.page = lsc.keepPage ? this.page : 1;
     this.userService
       .getUsers(this.getFiltersObject())
       .pipe(
@@ -121,14 +105,14 @@ export class UsersTable implements OnInit {
       )
       .subscribe({
         next: (res: ApiResponse<UserAggrageted[]>) => {
-          if (!this.allUsers) {
-            this.allUsers = [];
+          if (!this.usersData) {
+            this.usersData = [];
           }
+
           this.usersAsyncState = 'success';
-          this.allUsers = sumChunk ? [...this.allUsers, ...res.data] : res.data;
+          this.usersData = lsc.sumChunk ? [...this.usersData, ...res.data] : [...res.data];
           this.totalResults = res.total;
-          this.cdr.detectChanges(); // Ensure the view updates after data changes
-          this.viewport?.checkViewportSize();
+          this.cdr.detectChanges(); // Ensure the view updates after data changessort
         },
         error: (err) => {
           this.usersAsyncState = 'error';
@@ -149,19 +133,16 @@ export class UsersTable implements OnInit {
     return this.page < this.totalPages;
   }
 
-  onInfiniteModeChange(isInfinite: boolean): void {
-    this.isInfiniteMode = isInfinite;
-    this.page = 1;
-    this.pageSize = DEFAULT_PAGE_SIZE;
-    this.getFilteredUsers();
-  }
-
   previousPage(): void {
     if (!this.hasPreviousPage) {
       return;
     }
     this.page -= 1;
-    this.getFilteredUsers(true); // Keep the current page when navigating
+    this.getFilteredUsers({
+      keepPage: true,
+      keepRenderUntilChanged: true,
+      sumChunk: false,
+    }); // Don't reset page to 1 when navigating
   }
 
   nextPage(): void {
@@ -169,7 +150,11 @@ export class UsersTable implements OnInit {
       return;
     }
     this.page += 1;
-    this.getFilteredUsers(true); // Keep current page render when navigating
+    this.getFilteredUsers({
+      keepPage: true,
+      keepRenderUntilChanged: true,
+      sumChunk: false,
+    }); // Don't reset page to 1 when navigating
   }
 
   sortTable(field: UserSortField): void {
@@ -177,7 +162,19 @@ export class UsersTable implements OnInit {
     this.sortDirection = isSameField && this.sortDirection === 'asc' ? 'desc' : 'asc';
     this.currentSortField = field;
 
-    this.getFilteredUsers(true); // Keep the current page when sorting
+    this.getFilteredUsers({
+      keepPage: false,
+      keepRenderUntilChanged: true,
+      sumChunk: false,
+    });
+  }
+
+  getSortIcon(sortField: UserSortField): SortIconType {
+    return this.currentSortField === sortField
+      ? this.sortDirection === 'asc'
+        ? 'sort-up'
+        : 'sort-down'
+      : 'sort';
   }
 
   resetFilters(): void {
@@ -323,15 +320,27 @@ export class UsersTable implements OnInit {
 
   // Infinite Scroll Methods
 
-  nextChunk() {
+  onInfiniteModeChange(isInfinite: boolean): void {
+    this.isInfiniteMode = isInfinite;
+    this.page = 1;
+    this.pageSize = DEFAULT_PAGE_SIZE;
+    this.totalResults = 0;
+    this.usersData = [];
+    this.getFilteredUsers();
+  }
+
+  nextChunk($event?: any) {
+    console.log('nextChunk : $event: ', $event);
+
     if (this.usersAsyncState === 'loading' || !this.hasNextPage) {
       return;
     }
-    this.page += 1;
-    this.getFilteredUsers(true, true);
-  }
 
-  trackByUser(_index: number, row: UserAggrageted): string {
-    return row.id;
+    this.page += 1;
+    this.getFilteredUsers({
+      keepPage: true,
+      keepRenderUntilChanged: true,
+      sumChunk: true,
+    });
   }
 }

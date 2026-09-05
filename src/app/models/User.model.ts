@@ -32,7 +32,7 @@ export type UserAggrageted = User & {
 }
 
 export type UserSortField =
-  'salaryMonthly' | 'age' | 'firstName' | 'lastName' | 'email';
+  'firstName' | 'email' | 'salaryMonthly' | 'age' ;
 
 export interface UserListFilters {
   fullNameQuery: string;

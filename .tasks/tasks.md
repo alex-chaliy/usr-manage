@@ -4,7 +4,14 @@
 
 ✓ Add Specs for SDD (Spec Driven Development)
 
-Format specs text
+Format specs text (common.instructions.md)
+
+
+✓ Backend Specs: Add check for maximum page size (maximum 100 results per 1 request):
+```
+const MAXIMUM_PAGE_SIZE = 100;
+const isSizeValid: boolean = (req.params.limit - req.params.offset) < MAXIMUM_PAGE_SIZE;
+```
 
 # INFRASTRUCTURE
 
