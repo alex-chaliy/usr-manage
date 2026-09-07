@@ -1,0 +1,11 @@
+<div class="infinite-mode-toggler">
+  <label class="infinite-mode-toggler_label" for="infinite_scroll__mode__toggler"
+    >Use Infinite Scroll</label
+  >
+  <p-toggleswitch
+    class="infinite-mode-toggler_switch"
+    [ngModel]="isInfinite()"
+    (ngModelChange)="onValueChange($event)"
+    inputId="infinite_scroll__mode__toggler"
+  />
+</div>

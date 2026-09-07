@@ -228,7 +228,14 @@ e.g. `<version>` = v1
 
 We use Angular 22, and all components are `standalone` by default.
 
-For every angular app:
+## Structure for every Angular app:
+
+components structure: page component > view component > feature component > component.
+- **pages** consist from **views**.
+- **views** consist from **features**. 
+- **features** consist from **components**.
+- **component** is the basic small dummy ui element, e.g.
+- in addition we have **layout** components, e.g. sidebar, app header, app footer.
 
 src/app/ :
 

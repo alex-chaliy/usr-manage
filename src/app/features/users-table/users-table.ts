@@ -1,26 +1,34 @@
-import { InfiniteScrollDirective } from 'ngx-infinite-scroll';
+import { ScrollerOptions } from 'primeng/api';
+import { ButtonDirective } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
+import { Table, TableLazyLoadEvent, TableModule } from 'primeng/table';
 
-import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit, ViewChild } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
-import { MatTableModule } from '@angular/material/table';
+import { PIcon } from '@primeicons/angular/p-icon';
 
+import { CustomPaginator } from '../../components/custom-paginator/custom-paginator';
 import {
-    TogglePaginationMode
-} from '../../components/toggle-pagination-mode/toggle-pagination-mode';
-import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '../../constants/pagination.constants';
+  PageChangedOutput, PageSizeChangedOutput
+} from '../../components/custom-paginator/models/CustomPaginator.model';
+import {
+  InfiniteScrollToggler
+} from '../../components/infinite-scroll-toggler/infinite-scroll-toggler';
+import {
+  DEFAULT_PAGE_SIZE, INFINITE_MODE_PAGE_SIZE, PAGE_SIZES
+} from '../../constants/pagination.constants';
 import { ApiResponse, AsyncState } from '../../models/ApiInteraction.model';
 import { EmploymentType } from '../../models/EmploymentType.model';
 import { Level } from '../../models/Level.model';
-import { PaginationMode } from '../../models/Pagination.model';
+import { LoadStrategyConfig } from '../../models/LoadStrategyConfig.model';
 import { Position } from '../../models/Position.model';
 import { SortDirection } from '../../models/Sort.model';
+import { SortIconType } from '../../models/SortIcon.model';
 import { TechSkill } from '../../models/TechSkill.model';
 import { UserAggrageted, UserListFilters, UserSortField } from '../../models/User.model';
-import { CurrencyPipe } from '../../pipes/currency.pipe';
 import { UserService } from '../../services/user-service';
 
 @Component({
@@ -28,86 +36,90 @@ import { UserService } from '../../services/user-service';
   imports: [
     CommonModule,
     FormsModule,
-    MatTableModule,
-    ScrollingModule,
-    InfiniteScrollDirective,
-    CurrencyPipe,
-    TogglePaginationMode,
-    SelectModule
+
+    // custon components
+    InfiniteScrollToggler,
+    CustomPaginator,
+
+    // prime-ng components
+    SelectModule,
+    InputTextModule,
+    ButtonDirective,
+
+    TableModule,
+    PIcon,
   ],
   templateUrl: './users-table.html',
   styleUrl: './users-table.scss',
 })
 export class UsersTable implements OnInit {
   private readonly userService = inject(UserService);
-  private readonly cdk = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
-  
-  @ViewChild(CdkVirtualScrollViewport) private viewport?: CdkVirtualScrollViewport;
-  readonly virtualRowHeight = 56;
 
-  readonly displayedColumns = [
-    'fullName',
-    'email',
-    'position',
-    'level',
-    'primaryTech',
-    'employmentType',
-    'age',
-    'salaryMonthly',
-  ];
+  private readonly usersTableRef = viewChild<Table>('usersDataTable'); 
 
-  fullNameQuery = '';
-  emailQuery = '';
-  currentSortField: UserSortField | null = null;
-  paginationMode: PaginationMode = 'pagination';
-  sortDirection: SortDirection = 'asc';
-  page = 1;
-  pageSize = DEFAULT_PAGE_SIZE;
-  pageSizeOptions: number[] = [...PAGE_SIZES];
+  readonly scrollOptions: ScrollerOptions = {
+    itemSize: 56,
 
-  chosenPositionId = '';
-  chosenLevelId = '';
-  chosenTechId = '';
-  chosenEmploymentTypeId = '';
+    // TODO find the proper solution how to fix table glitches when scroll up, and remove these comments
+    // newly loaded items are appended to the DOM without removing previously rendered items
+    // helps to fix virtual-scroll bug where
+    // the height/range calculation glitches and causes jumpy scrolling or blank rows
+    // appendOnly: true,
 
-  positionMap = null as unknown as Position[];
-  levelMap = null as unknown as Level[];
-  techMap = null as unknown as TechSkill[];
-  employmentTypeMap = null as unknown as EmploymentType[];
+    // numToleratedItems: 10, // rows tolerated outside viewport before triggering load
 
-  totalResults = 0;
-  allUsers: UserAggrageted[] = [];
+    delay: 150, // ms debounce while scrolling
+  };
 
-  usersAsyncState: AsyncState = 'idle';
-  positionMapAsyncState: AsyncState = 'idle';
-  levelMapAsyncState: AsyncState = 'idle';
-  techMapAsyncState: AsyncState = 'idle';
-  employmentTypeMapAsyncState: AsyncState = 'idle';
+  isInfiniteMode = signal<boolean>(false);
 
-  keepCurrentRender = false;
+  usersData = signal<UserAggrageted[]>([]);
+  usersAsyncState = signal<AsyncState>('idle');
+
+  offset = signal<number>(0);
+  limit = signal<number>(DEFAULT_PAGE_SIZE);
+  // total records in db with applied filters
+  totalRecordsInDB = signal<number>(0);
+
+  pageSizeOptions = signal<number[]>([...PAGE_SIZES]);
+
+  fullNameQuery = signal<string>('');
+  emailQuery = signal<string>('');
+
+  currentSortField = signal<UserSortField | null>(null);
+  sortDirection = signal<SortDirection>('asc');
+
+  chosenPositionId = signal<string>('');
+  chosenLevelId = signal<string>('');
+  chosenTechId = signal<string>('');
+  chosenEmploymentTypeId = signal<string>('');
+
+  // options for select-filters
+  positionOptions = signal<Position[]>([]);
+  levelOptions = signal<Level[]>([]);
+  techOptions = signal<TechSkill[]>([]);
+  employmentTypeOptions = signal<EmploymentType[]>([]);
+
+  positionOptionsAsyncState = signal<AsyncState>('idle');
+  levelOptionsAsyncState = signal<AsyncState>('idle');
+  techOptionsAsyncState = signal<AsyncState>('idle');
+  employmentTypeOptionsAsyncState = signal<AsyncState>('idle');
 
   ngOnInit(): void {
     this.getFilteredUsers();
     this.getSelectOptions();
   }
 
-  /**
-   * @param keepPage - if true, keeps current render of data-table and current page number.
-   * current page number can be increased/decreased from outside, but it doesn't reset page number to 1.
-   * to say shortly, do not reset page number to 1,
-   * and keep current render of data-table until we recieve the next page data.
-   * `keepPage = true` is used when sorting or navigating between pages,
-   * that helps to avoid ui blink. 
-   * @param sumChunk - if true, don't wipe users-list with new chunk (next page data),
-   * but add new chunk to existed users-list instead.
-   * `sumChunk = true` needed for infinite scroll.
-   * `sumChunk = false` works with classic pagination.
-   */
-  getFilteredUsers(keepPage = false, sumChunk = false): void {
-    this.usersAsyncState = 'loading';
-    this.keepCurrentRender = keepPage;
-    this.page = keepPage ? this.page : 1;
+  getFilteredUsers(
+    loadStrategy: LoadStrategyConfig = {
+      keepOffset: false,
+      sumChunk: false,
+    },
+  ): void {
+    this.usersAsyncState.set('loading');
+    !loadStrategy.keepOffset && this.offset.set(0);
+
     this.userService
       .getUsers(this.getFiltersObject())
       .pipe(
@@ -115,125 +127,122 @@ export class UsersTable implements OnInit {
       )
       .subscribe({
         next: (res: ApiResponse<UserAggrageted[]>) => {
-          if (!this.allUsers) {
-            this.allUsers = [];
-          }
-          this.usersAsyncState = 'success';
-          this.allUsers = sumChunk ? [...this.allUsers, ...res.data] : res.data;
-          this.totalResults = res.total;
-          this.cdk.detectChanges(); // Ensure the view updates after data changes
-          this.viewport?.checkViewportSize();
+          // TODO remove log
+          // console.log('getFilteredUsers : res : ', res);
+
+          this.usersAsyncState.set('success');
+          this.usersData.set(
+            loadStrategy.sumChunk ? [...this.usersData(), ...res.data] : [...res.data],
+          );
+          this.totalRecordsInDB.set(res.total);
         },
         error: (err) => {
-          this.usersAsyncState = 'error';
+          this.usersAsyncState.set('error');
           console.error('Error fetching filtered users:', err);
         },
       });
   }
 
-  get totalPages(): number {
-    return Math.max(1, Math.ceil(this.totalResults / this.pageSize));
+  onPageChange(pco: PageChangedOutput): void {
+    // TODO remove log
+    // console.log('onPageChange : pco : ', pco);
+
+    this.offset.set(pco.offset);
+    this.getFilteredUsers({
+      keepOffset: true, // Don't reset offset to 0 when navigating
+    });
   }
 
-  get hasPreviousPage(): boolean {
-    return this.page > 1;
-  }
+  onPageSizeChange(psco: PageSizeChangedOutput): void {
+    // TODO remove log
+    // console.log('onPageSizeChange : psco : ', psco);
 
-  get hasNextPage(): boolean {
-    return this.page < this.totalPages;
-  }
-
-  onPaginationModeChange(mode: PaginationMode): void {
-    console.log('Pagination mode changed:', mode);
-    this.page = 1;
-    this.pageSize = DEFAULT_PAGE_SIZE;
-    this.getFilteredUsers();
-  }
-
-  previousPage(): void {
-    if (!this.hasPreviousPage) {
-      return;
-    }
-    this.page -= 1;
-    this.getFilteredUsers(true); // Keep the current page when navigating
-  }
-
-  nextPage(): void {
-    if (!this.hasNextPage) {
-      return;
-    }
-    this.page += 1;
-    this.getFilteredUsers(true); // Keep current page render when navigating
+    this.limit.set(psco.limit);
+    this.getFilteredUsers({ keepOffset: false }); // intentionally keep offset
   }
 
   sortTable(field: UserSortField): void {
-    const isSameField = this.currentSortField === field;
-    this.sortDirection = isSameField && this.sortDirection === 'asc' ? 'desc' : 'asc';
-    this.currentSortField = field;
+    const isSameField = this.currentSortField() === field;
+    this.sortDirection.set(isSameField ? (this.sortDirection() === 'asc' ? 'desc' : 'asc') : 'asc');
+    this.currentSortField.set(field);
 
-    this.getFilteredUsers(true); // Keep the current page when sorting
+    this.getFilteredUsers();
+  }
+
+  // TODO replace with `computed`
+  // probably create a Map with sort-field names and bind it to this.currentSortField()
+  getSortIconName(sortField: UserSortField): SortIconType {
+    return this.currentSortField() === sortField
+      ? this.sortDirection() === 'asc'
+        ? 'sort-up'
+        : 'sort-down'
+      : 'sort';
   }
 
   resetFilters(): void {
-    this.fullNameQuery = '';
-    this.emailQuery = '';
-    this.page = 1;
-    this.currentSortField = null;
-    this.sortDirection = 'asc';
-    this.chosenPositionId = '';
-    this.chosenLevelId = '';
-    this.chosenTechId = '';
-    this.chosenEmploymentTypeId = '';
+    // TODO find a proper and working solution how to fix glitches occured on filters-reset, and remove this comments
+    // trying  to fix glitches in infinite-mode, when reset a table
+    // this.usersTableRef()?.reset();
 
-    this.getFilteredUsers();
+    this.offset.set(0);
+    this.limit.set(this.isInfiniteMode() ? INFINITE_MODE_PAGE_SIZE : DEFAULT_PAGE_SIZE);
+    this.totalRecordsInDB.set(0);
+
+    this.fullNameQuery.set('');
+    this.emailQuery.set('');
+
+    this.currentSortField.set(null);
+    this.sortDirection.set('asc');
+
+    this.chosenPositionId.set('');
+    this.chosenLevelId.set('');
+    this.chosenTechId.set('');
+    this.chosenEmploymentTypeId.set('');
+
+    this.usersData.set([]);
+
+    this.getFilteredUsers({
+      keepOffset: false, // intentionally reset offset
+      sumChunk: false, // intentionally reset users data-array with a new data from response
+    });
   }
 
   private getFiltersObject(): UserListFilters {
     return {
-      fullNameQuery: this.fullNameQuery,
-      emailQuery: this.emailQuery,
-      page: this.page,
-      pageSize: this.pageSize,
-      sortField: this.currentSortField,
-      sortDirection: this.sortDirection,
+      limit: this.limit(),
+      offset: this.offset(),
 
-      positionQuery: this.chosenPositionId,
-      levelQuery: this.chosenLevelId,
-      techQuery: this.chosenTechId,
-      employmentTypeQuery: this.chosenEmploymentTypeId,
+      sortField: this.currentSortField(),
+      sortDirection: this.sortDirection(),
+
+      fullNameQuery: this.fullNameQuery(),
+      emailQuery: this.emailQuery(),
+
+      positionQuery: this.chosenPositionId(),
+      levelQuery: this.chosenLevelId(),
+      techQuery: this.chosenTechId(),
+      employmentTypeQuery: this.chosenEmploymentTypeId(),
     };
   }
 
   onSelectPositionChange(chosenPositionId: string): void {
-    this.chosenPositionId = chosenPositionId;
+    this.chosenPositionId.set(chosenPositionId);
     this.getFilteredUsers();
   }
 
   onSelectLevelChange(chosenLevelId: string): void {
-    this.chosenLevelId = chosenLevelId;
+    this.chosenLevelId.set(chosenLevelId);
     this.getFilteredUsers();
   }
 
   onSelectTechChange(chosenTechId: string): void {
-    this.chosenTechId = chosenTechId;
+    this.chosenTechId.set(chosenTechId);
     this.getFilteredUsers();
   }
 
   onSelectEmploymentTypeChange(chosenEmploymentTypeId: string): void {
-    this.chosenEmploymentTypeId = chosenEmploymentTypeId;
+    this.chosenEmploymentTypeId.set(chosenEmploymentTypeId);
     this.getFilteredUsers();
-  }
-
-  onSelectPageSizeChange(selection: number | null): void {
-    if (selection === null || selection === undefined) {
-      return;
-    }
-    const numeric = Number(selection);
-    if (!Number.isNaN(numeric) && numeric > 0) {
-      this.pageSize = numeric;
-      this.page = 1;
-      this.getFilteredUsers();
-    }
   }
 
   getSelectOptions(): void {
@@ -244,88 +253,118 @@ export class UsersTable implements OnInit {
   }
 
   getPositionOptions(): void {
-    this.positionMapAsyncState = 'loading';
+    this.positionOptionsAsyncState.set('loading');
     this.userService
       .getPositions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res: ApiResponse<Position[]>) => {
-          this.positionMap = res.data;
-          this.positionMapAsyncState = 'success';
-          this.cdk.detectChanges();
+          this.positionOptions.set(res.data);
+          this.positionOptionsAsyncState.set('success');
         },
         error: (err) => {
-          this.positionMapAsyncState = 'error';
+          this.positionOptionsAsyncState.set('error');
           console.error('Error fetching position options:', err);
         },
       });
   }
 
   getLevelOptions(): void {
-    this.levelMapAsyncState = 'loading';
+    this.levelOptionsAsyncState.set('loading');
     this.userService
       .getLevels()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res: ApiResponse<Level[]>) => {
-          this.levelMap = res.data;
-          this.levelMapAsyncState = 'success';
-          this.cdk.detectChanges();
+          this.levelOptions.set(res.data);
+          this.levelOptionsAsyncState.set('success');
         },
         error: (err) => {
-          this.levelMapAsyncState = 'error';
+          this.levelOptionsAsyncState.set('error');
           console.error('Error fetching level options:', err);
         },
       });
   }
 
   getTechOptions(): void {
-    this.techMapAsyncState = 'loading';
+    this.techOptionsAsyncState.set('loading');
     this.userService
       .getTechs()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res: ApiResponse<TechSkill[]>) => {
-          this.techMap = res.data;
-          this.techMapAsyncState = 'success';
-          this.cdk.detectChanges();
+          this.techOptions.set(res.data);
+          this.techOptionsAsyncState.set('success');
         },
         error: (err) => {
-          this.techMapAsyncState = 'error';
+          this.techOptionsAsyncState.set('error');
           console.error('Error fetching tech options:', err);
         },
       });
   }
 
   getEmploymentTypeOptions(): void {
-    this.employmentTypeMapAsyncState = 'loading';
+    this.employmentTypeOptionsAsyncState.set('loading');
     this.userService
       .getEmploymentTypes()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res: ApiResponse<EmploymentType[]>) => {
-          this.employmentTypeMap = res.data;
-          this.employmentTypeMapAsyncState = 'success';
-          this.cdk.detectChanges();
+          this.employmentTypeOptions.set(res.data);
+          this.employmentTypeOptionsAsyncState.set('success');
         },
         error: (err) => {
-          this.employmentTypeMapAsyncState = 'error';
+          this.employmentTypeOptionsAsyncState.set('error');
           console.error('Error fetching employment type options:', err);
         },
       });
   }
 
+  onFullNameInputChange(value: string) {
+    this.fullNameQuery.set(value);
+    this.getFilteredUsers();
+  }
+
+  onEmailInputChange(value: string) {
+    this.emailQuery.set(value);
+    this.getFilteredUsers();
+  }
+
   // Infinite Scroll Methods
 
-  nextChunk() {
-    if (this.usersAsyncState === 'loading' || !this.hasNextPage) {
-      return;
-    }
-    this.page += 1;
-    this.getFilteredUsers(true, true);
+  onInfiniteModeChange(isInfinite: boolean): void {
+    this.isInfiniteMode.set(isInfinite);
+    this.limit.set(this.isInfiniteMode() ? INFINITE_MODE_PAGE_SIZE : DEFAULT_PAGE_SIZE);
+    this.totalRecordsInDB.set(0);
+
+    this.getFilteredUsers({
+      keepOffset: false, // intentionally reset offset
+      sumChunk: false, // intentionally reset users data-array with a new data from response
+    });
   }
 
-  trackByUser(_index: number, row: UserAggrageted): string {
-    return row.id;
+  loadChunk(loadEvent?: TableLazyLoadEvent) {
+    if (this.isLoadChunkBlocked()) {
+      return;
+    }
+
+    // TODO remive log
+    // console.log('loadChunk :  loadEvent: ', loadEvent);
+
+    this.offset.set(loadEvent?.first ?? this.usersData().length);
+
+    this.getFilteredUsers({
+      keepOffset: true,
+      sumChunk: true,
+    });
   }
+
+  private isLoadChunkBlocked = computed(() => {
+    const usersLoading = this.usersAsyncState() === 'loading';
+    const allRecordsLoaded = this.usersData().length >= this.totalRecordsInDB();
+
+    // TODO remove log
+    // console.log('isLoadChunkBlocked : ', usersLoading || allRecordsLoaded);
+    return usersLoading || allRecordsLoaded;
+  });
 }

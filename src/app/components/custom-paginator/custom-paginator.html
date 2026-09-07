@@ -1,0 +1,17 @@
+<div class="pagination-controls">
+  <p-select
+    [disabled]="disabled()"
+    [options]="pageSizeOptions()"
+    [ngModel]="limit()"
+    (ngModelChange)="emitPageSizeChange($event)"
+    [placeholder]="'Page size'"
+  />
+
+  <button pButton type="button" [disabled]="!hasPrevPage() || disabled()" (click)="emitPrevPage()">
+    Previous
+  </button>
+
+  <span>Page {{ page() }} of {{ pages() }}</span>
+
+  <button pButton type="button" [disabled]="!hasNextPage() || disabled()" (click)="emitNextPage()">Next</button>
+</div>
