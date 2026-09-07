@@ -81,5 +81,5 @@ const PrimeNGIconImports = [];
 template usage:
 
 ```html
-<svg class="sort-icon" [pIcon]="getSortIcon('firstName')" [size]="12"></svg>
+<svg class="sort-icon" [pIcon]="getSortIconName('firstName')" [size]="12"></svg>
 ```

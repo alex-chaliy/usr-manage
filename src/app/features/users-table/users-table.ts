@@ -1,19 +1,25 @@
-// import { TableLazyLoadEvent } from 'primeng/api';
+import { ScrollerOptions } from 'primeng/api';
 import { ButtonDirective } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { SelectModule } from 'primeng/select';
-import { TableModule } from 'primeng/table';
+import { Table, TableLazyLoadEvent, TableModule } from 'primeng/table';
 
 import { CommonModule } from '@angular/common';
-import { ChangeDetectorRef, Component, DestroyRef, inject, OnInit } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal, viewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { PIcon } from '@primeicons/angular/p-icon';
 
+import { CustomPaginator } from '../../components/custom-paginator/custom-paginator';
+import {
+  PageChangedOutput, PageSizeChangedOutput
+} from '../../components/custom-paginator/models/CustomPaginator.model';
 import {
   InfiniteScrollToggler
 } from '../../components/infinite-scroll-toggler/infinite-scroll-toggler';
-import { DEFAULT_PAGE_SIZE, PAGE_SIZES } from '../../constants/pagination.constants';
+import {
+  DEFAULT_PAGE_SIZE, INFINITE_MODE_PAGE_SIZE, PAGE_SIZES
+} from '../../constants/pagination.constants';
 import { ApiResponse, AsyncState } from '../../models/ApiInteraction.model';
 import { EmploymentType } from '../../models/EmploymentType.model';
 import { Level } from '../../models/Level.model';
@@ -25,63 +31,80 @@ import { TechSkill } from '../../models/TechSkill.model';
 import { UserAggrageted, UserListFilters, UserSortField } from '../../models/User.model';
 import { UserService } from '../../services/user-service';
 
-const PrimeNGIconImports = [PIcon];
-
 @Component({
   selector: 'app-users-table',
   imports: [
     CommonModule,
     FormsModule,
 
+    // custon components
     InfiniteScrollToggler,
+    CustomPaginator,
 
+    // prime-ng components
     SelectModule,
     InputTextModule,
     ButtonDirective,
 
     TableModule,
-    ...PrimeNGIconImports,
+    PIcon,
   ],
   templateUrl: './users-table.html',
   styleUrl: './users-table.scss',
 })
 export class UsersTable implements OnInit {
   private readonly userService = inject(UserService);
-  private readonly cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
 
-  isInfiniteMode = false;
+  private readonly usersTableRef = viewChild<Table>('usersDataTable'); 
 
-  fullNameQuery = '';
-  emailQuery = '';
+  readonly scrollOptions: ScrollerOptions = {
+    itemSize: 56,
 
-  currentSortField: UserSortField | null = null;
+    // TODO find the proper solution how to fix table glitches when scroll up, and remove these comments
+    // newly loaded items are appended to the DOM without removing previously rendered items
+    // helps to fix virtual-scroll bug where
+    // the height/range calculation glitches and causes jumpy scrolling or blank rows
+    // appendOnly: true,
 
-  sortDirection: SortDirection = 'asc';
-  page = 1;
-  pageSize = DEFAULT_PAGE_SIZE;
-  pageSizeOptions: number[] = [...PAGE_SIZES];
+    // numToleratedItems: 10, // rows tolerated outside viewport before triggering load
 
-  chosenPositionId = '';
-  chosenLevelId = '';
-  chosenTechId = '';
-  chosenEmploymentTypeId = '';
+    delay: 150, // ms debounce while scrolling
+  };
 
-  positionMap = null as unknown as Position[];
-  levelMap = null as unknown as Level[];
-  techMap = null as unknown as TechSkill[];
-  employmentTypeMap = null as unknown as EmploymentType[];
+  isInfiniteMode = signal<boolean>(false);
 
-  totalResults = 0;
-  usersData: UserAggrageted[] = [];
+  usersData = signal<UserAggrageted[]>([]);
+  usersAsyncState = signal<AsyncState>('idle');
 
-  usersAsyncState: AsyncState = 'idle';
-  positionMapAsyncState: AsyncState = 'idle';
-  levelMapAsyncState: AsyncState = 'idle';
-  techMapAsyncState: AsyncState = 'idle';
-  employmentTypeMapAsyncState: AsyncState = 'idle';
+  offset = signal<number>(0);
+  limit = signal<number>(DEFAULT_PAGE_SIZE);
+  // total records in db with applied filters
+  totalRecordsInDB = signal<number>(0);
 
-  keepRenderUntilChanged = false;
+  pageSizeOptions = signal<number[]>([...PAGE_SIZES]);
+
+  fullNameQuery = signal<string>('');
+  emailQuery = signal<string>('');
+
+  currentSortField = signal<UserSortField | null>(null);
+  sortDirection = signal<SortDirection>('asc');
+
+  chosenPositionId = signal<string>('');
+  chosenLevelId = signal<string>('');
+  chosenTechId = signal<string>('');
+  chosenEmploymentTypeId = signal<string>('');
+
+  // options for select-filters
+  positionOptions = signal<Position[]>([]);
+  levelOptions = signal<Level[]>([]);
+  techOptions = signal<TechSkill[]>([]);
+  employmentTypeOptions = signal<EmploymentType[]>([]);
+
+  positionOptionsAsyncState = signal<AsyncState>('idle');
+  levelOptionsAsyncState = signal<AsyncState>('idle');
+  techOptionsAsyncState = signal<AsyncState>('idle');
+  employmentTypeOptionsAsyncState = signal<AsyncState>('idle');
 
   ngOnInit(): void {
     this.getFilteredUsers();
@@ -89,15 +112,14 @@ export class UsersTable implements OnInit {
   }
 
   getFilteredUsers(
-    lsc: LoadStrategyConfig = {
-      keepPage: false,
-      keepRenderUntilChanged: false,
+    loadStrategy: LoadStrategyConfig = {
+      keepOffset: false,
       sumChunk: false,
     },
   ): void {
-    this.usersAsyncState = 'loading';
-    this.keepRenderUntilChanged = lsc.keepRenderUntilChanged;
-    this.page = lsc.keepPage ? this.page : 1;
+    this.usersAsyncState.set('loading');
+    !loadStrategy.keepOffset && this.offset.set(0);
+
     this.userService
       .getUsers(this.getFiltersObject())
       .pipe(
@@ -105,138 +127,122 @@ export class UsersTable implements OnInit {
       )
       .subscribe({
         next: (res: ApiResponse<UserAggrageted[]>) => {
-          if (!this.usersData) {
-            this.usersData = [];
-          }
+          // TODO remove log
+          // console.log('getFilteredUsers : res : ', res);
 
-          this.usersAsyncState = 'success';
-          this.usersData = lsc.sumChunk ? [...this.usersData, ...res.data] : [...res.data];
-          this.totalResults = res.total;
-          this.cdr.detectChanges(); // Ensure the view updates after data changessort
+          this.usersAsyncState.set('success');
+          this.usersData.set(
+            loadStrategy.sumChunk ? [...this.usersData(), ...res.data] : [...res.data],
+          );
+          this.totalRecordsInDB.set(res.total);
         },
         error: (err) => {
-          this.usersAsyncState = 'error';
+          this.usersAsyncState.set('error');
           console.error('Error fetching filtered users:', err);
         },
       });
   }
 
-  get totalPages(): number {
-    return Math.max(1, Math.ceil(this.totalResults / this.pageSize));
-  }
+  onPageChange(pco: PageChangedOutput): void {
+    // TODO remove log
+    // console.log('onPageChange : pco : ', pco);
 
-  get hasPreviousPage(): boolean {
-    return this.page > 1;
-  }
-
-  get hasNextPage(): boolean {
-    return this.page < this.totalPages;
-  }
-
-  previousPage(): void {
-    if (!this.hasPreviousPage) {
-      return;
-    }
-    this.page -= 1;
+    this.offset.set(pco.offset);
     this.getFilteredUsers({
-      keepPage: true,
-      keepRenderUntilChanged: true,
-      sumChunk: false,
-    }); // Don't reset page to 1 when navigating
-  }
-
-  nextPage(): void {
-    if (!this.hasNextPage) {
-      return;
-    }
-    this.page += 1;
-    this.getFilteredUsers({
-      keepPage: true,
-      keepRenderUntilChanged: true,
-      sumChunk: false,
-    }); // Don't reset page to 1 when navigating
-  }
-
-  sortTable(field: UserSortField): void {
-    const isSameField = this.currentSortField === field;
-    this.sortDirection = isSameField && this.sortDirection === 'asc' ? 'desc' : 'asc';
-    this.currentSortField = field;
-
-    this.getFilteredUsers({
-      keepPage: false,
-      keepRenderUntilChanged: true,
-      sumChunk: false,
+      keepOffset: true, // Don't reset offset to 0 when navigating
     });
   }
 
-  getSortIcon(sortField: UserSortField): SortIconType {
-    return this.currentSortField === sortField
-      ? this.sortDirection === 'asc'
+  onPageSizeChange(psco: PageSizeChangedOutput): void {
+    // TODO remove log
+    // console.log('onPageSizeChange : psco : ', psco);
+
+    this.limit.set(psco.limit);
+    this.getFilteredUsers({ keepOffset: false }); // intentionally keep offset
+  }
+
+  sortTable(field: UserSortField): void {
+    const isSameField = this.currentSortField() === field;
+    this.sortDirection.set(isSameField ? (this.sortDirection() === 'asc' ? 'desc' : 'asc') : 'asc');
+    this.currentSortField.set(field);
+
+    this.getFilteredUsers();
+  }
+
+  // TODO replace with `computed`
+  // probably create a Map with sort-field names and bind it to this.currentSortField()
+  getSortIconName(sortField: UserSortField): SortIconType {
+    return this.currentSortField() === sortField
+      ? this.sortDirection() === 'asc'
         ? 'sort-up'
         : 'sort-down'
       : 'sort';
   }
 
   resetFilters(): void {
-    this.fullNameQuery = '';
-    this.emailQuery = '';
-    this.page = 1;
-    this.currentSortField = null;
-    this.sortDirection = 'asc';
-    this.chosenPositionId = '';
-    this.chosenLevelId = '';
-    this.chosenTechId = '';
-    this.chosenEmploymentTypeId = '';
+    // TODO find a proper and working solution how to fix glitches occured on filters-reset, and remove this comments
+    // trying  to fix glitches in infinite-mode, when reset a table
+    // this.usersTableRef()?.reset();
 
-    this.getFilteredUsers();
+    this.offset.set(0);
+    this.limit.set(this.isInfiniteMode() ? INFINITE_MODE_PAGE_SIZE : DEFAULT_PAGE_SIZE);
+    this.totalRecordsInDB.set(0);
+
+    this.fullNameQuery.set('');
+    this.emailQuery.set('');
+
+    this.currentSortField.set(null);
+    this.sortDirection.set('asc');
+
+    this.chosenPositionId.set('');
+    this.chosenLevelId.set('');
+    this.chosenTechId.set('');
+    this.chosenEmploymentTypeId.set('');
+
+    this.usersData.set([]);
+
+    this.getFilteredUsers({
+      keepOffset: false, // intentionally reset offset
+      sumChunk: false, // intentionally reset users data-array with a new data from response
+    });
   }
 
   private getFiltersObject(): UserListFilters {
     return {
-      fullNameQuery: this.fullNameQuery,
-      emailQuery: this.emailQuery,
-      page: this.page,
-      pageSize: this.pageSize,
-      sortField: this.currentSortField,
-      sortDirection: this.sortDirection,
+      limit: this.limit(),
+      offset: this.offset(),
 
-      positionQuery: this.chosenPositionId,
-      levelQuery: this.chosenLevelId,
-      techQuery: this.chosenTechId,
-      employmentTypeQuery: this.chosenEmploymentTypeId,
+      sortField: this.currentSortField(),
+      sortDirection: this.sortDirection(),
+
+      fullNameQuery: this.fullNameQuery(),
+      emailQuery: this.emailQuery(),
+
+      positionQuery: this.chosenPositionId(),
+      levelQuery: this.chosenLevelId(),
+      techQuery: this.chosenTechId(),
+      employmentTypeQuery: this.chosenEmploymentTypeId(),
     };
   }
 
   onSelectPositionChange(chosenPositionId: string): void {
-    this.chosenPositionId = chosenPositionId;
+    this.chosenPositionId.set(chosenPositionId);
     this.getFilteredUsers();
   }
 
   onSelectLevelChange(chosenLevelId: string): void {
-    this.chosenLevelId = chosenLevelId;
+    this.chosenLevelId.set(chosenLevelId);
     this.getFilteredUsers();
   }
 
   onSelectTechChange(chosenTechId: string): void {
-    this.chosenTechId = chosenTechId;
+    this.chosenTechId.set(chosenTechId);
     this.getFilteredUsers();
   }
 
   onSelectEmploymentTypeChange(chosenEmploymentTypeId: string): void {
-    this.chosenEmploymentTypeId = chosenEmploymentTypeId;
+    this.chosenEmploymentTypeId.set(chosenEmploymentTypeId);
     this.getFilteredUsers();
-  }
-
-  onSelectPageSizeChange(selection: number | null): void {
-    if (selection === null || selection === undefined) {
-      return;
-    }
-    const numeric = Number(selection);
-    if (!Number.isNaN(numeric) && numeric > 0) {
-      this.pageSize = numeric;
-      this.page = 1;
-      this.getFilteredUsers();
-    }
   }
 
   getSelectOptions(): void {
@@ -247,100 +253,118 @@ export class UsersTable implements OnInit {
   }
 
   getPositionOptions(): void {
-    this.positionMapAsyncState = 'loading';
+    this.positionOptionsAsyncState.set('loading');
     this.userService
       .getPositions()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res: ApiResponse<Position[]>) => {
-          this.positionMap = res.data;
-          this.positionMapAsyncState = 'success';
-          this.cdr.detectChanges();
+          this.positionOptions.set(res.data);
+          this.positionOptionsAsyncState.set('success');
         },
         error: (err) => {
-          this.positionMapAsyncState = 'error';
+          this.positionOptionsAsyncState.set('error');
           console.error('Error fetching position options:', err);
         },
       });
   }
 
   getLevelOptions(): void {
-    this.levelMapAsyncState = 'loading';
+    this.levelOptionsAsyncState.set('loading');
     this.userService
       .getLevels()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res: ApiResponse<Level[]>) => {
-          this.levelMap = res.data;
-          this.levelMapAsyncState = 'success';
-          this.cdr.detectChanges();
+          this.levelOptions.set(res.data);
+          this.levelOptionsAsyncState.set('success');
         },
         error: (err) => {
-          this.levelMapAsyncState = 'error';
+          this.levelOptionsAsyncState.set('error');
           console.error('Error fetching level options:', err);
         },
       });
   }
 
   getTechOptions(): void {
-    this.techMapAsyncState = 'loading';
+    this.techOptionsAsyncState.set('loading');
     this.userService
       .getTechs()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res: ApiResponse<TechSkill[]>) => {
-          this.techMap = res.data;
-          this.techMapAsyncState = 'success';
-          this.cdr.detectChanges();
+          this.techOptions.set(res.data);
+          this.techOptionsAsyncState.set('success');
         },
         error: (err) => {
-          this.techMapAsyncState = 'error';
+          this.techOptionsAsyncState.set('error');
           console.error('Error fetching tech options:', err);
         },
       });
   }
 
   getEmploymentTypeOptions(): void {
-    this.employmentTypeMapAsyncState = 'loading';
+    this.employmentTypeOptionsAsyncState.set('loading');
     this.userService
       .getEmploymentTypes()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (res: ApiResponse<EmploymentType[]>) => {
-          this.employmentTypeMap = res.data;
-          this.employmentTypeMapAsyncState = 'success';
-          this.cdr.detectChanges();
+          this.employmentTypeOptions.set(res.data);
+          this.employmentTypeOptionsAsyncState.set('success');
         },
         error: (err) => {
-          this.employmentTypeMapAsyncState = 'error';
+          this.employmentTypeOptionsAsyncState.set('error');
           console.error('Error fetching employment type options:', err);
         },
       });
   }
 
-  // Infinite Scroll Methods
-
-  onInfiniteModeChange(isInfinite: boolean): void {
-    this.isInfiniteMode = isInfinite;
-    this.page = 1;
-    this.pageSize = DEFAULT_PAGE_SIZE;
-    this.totalResults = 0;
-    this.usersData = [];
+  onFullNameInputChange(value: string) {
+    this.fullNameQuery.set(value);
     this.getFilteredUsers();
   }
 
-  nextChunk($event?: any) {
-    console.log('nextChunk : $event: ', $event);
+  onEmailInputChange(value: string) {
+    this.emailQuery.set(value);
+    this.getFilteredUsers();
+  }
 
-    if (this.usersAsyncState === 'loading' || !this.hasNextPage) {
+  // Infinite Scroll Methods
+
+  onInfiniteModeChange(isInfinite: boolean): void {
+    this.isInfiniteMode.set(isInfinite);
+    this.limit.set(this.isInfiniteMode() ? INFINITE_MODE_PAGE_SIZE : DEFAULT_PAGE_SIZE);
+    this.totalRecordsInDB.set(0);
+
+    this.getFilteredUsers({
+      keepOffset: false, // intentionally reset offset
+      sumChunk: false, // intentionally reset users data-array with a new data from response
+    });
+  }
+
+  loadChunk(loadEvent?: TableLazyLoadEvent) {
+    if (this.isLoadChunkBlocked()) {
       return;
     }
 
-    this.page += 1;
+    // TODO remive log
+    // console.log('loadChunk :  loadEvent: ', loadEvent);
+
+    this.offset.set(loadEvent?.first ?? this.usersData().length);
+
     this.getFilteredUsers({
-      keepPage: true,
-      keepRenderUntilChanged: true,
+      keepOffset: true,
       sumChunk: true,
     });
   }
+
+  private isLoadChunkBlocked = computed(() => {
+    const usersLoading = this.usersAsyncState() === 'loading';
+    const allRecordsLoaded = this.usersData().length >= this.totalRecordsInDB();
+
+    // TODO remove log
+    // console.log('isLoadChunkBlocked : ', usersLoading || allRecordsLoaded);
+    return usersLoading || allRecordsLoaded;
+  });
 }

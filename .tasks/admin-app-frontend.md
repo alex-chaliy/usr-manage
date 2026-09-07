@@ -2,16 +2,9 @@
 
 ## Bugs
 
-[bug 1]: Infinite Scroll mode for users table breaks. Load Stops.
+[bug 1]: Users table: Infinite Scroll mode for users table breaks. Load Stops.
 It loads only first 3 data chunks on large screens, than stops.
 It works good on smaller screen sizes. Which actually very strange.
-
-Probale Solution:
-Remove custom classic pagination and raplace it with built in prime-ng table pagination;
-Repace `page` machanism to `offset-limit` mechanism;
-While Infinite Mode: bind `offset-limit` mechanism to the `(onLazyLoad)` output
-( `first` and `rows` fields from onLazyLoad output mean `offset` and `pageSize`,
-and to get `limit` u need to make `first + rows` )
 
 
 ## Part 1
@@ -21,7 +14,6 @@ and to get `limit` u need to make `first + rows` )
 ✓ implement routing with lazy loading
 
 ✓ Fix mappings:
-
 - in user-service
 - in user table
 
@@ -32,18 +24,21 @@ and to get `limit` u need to make `first + rows` )
 
 ~~Fix infinite table width~~
 
-... Replace the existed users data-table/data-table-infinite with PrimeNG Table and PrimeNG Scroller (allows to use both - virtual and infinite scroll features);
+✓ Replace the existed users data-table/data-table-infinite with PrimeNG Table and PrimeNG Scroller (allows to use both - virtual and infinite scroll features);
 
 ✓ Implement `getFilteredUsers()` parameter changes: <br/>
 split `keepPage` parameter into `keepPage` and `keepRenderUntilChanged`. <br/>
 `keepPage` - means dont reset page number <br/>
-`keepRenderUntilChanged` - dont hide current render while new data chunk is being loaded <br/>
+~~`keepRenderUntilChanged` - dont hide current render while new data chunk is being loaded <br/>~~
 Combine them with `sumChunk` and create interface:
 
 ```typescript
 export interface LoadStrategyConfig {
   keepPage?: boolean;
-  keepRenderUntilChanged?: boolean;
+  // `keepRenderUntilChanged` is not needed anymore and it was removed,
+  // since we don't need to remove data-table from DOM on condition like this:
+  // `@if (usersAsyncState() === 'success' || keepRenderUntilChanged()) {...}`
+  // keepRenderUntilChanged?: boolean;
   sumChunk?: boolean;
 }
 ```
@@ -109,7 +104,52 @@ Some spec desription is already provided above `getFilteredUsers` method, change
 
 ## Part 3
 
-Fix [bug 1] (search [bug 1] in this file)
+... Fix [bug 1] (**search for "[bug 1]" in this file**)
+
+[bug 1] Solution:
+- ~~Remove custom classic pagination and raplace it with built in prime-ng table pagination;~~
+- ✓ Move custom classic pagination to separate componet
+- ✓ Repace `page` machanism to `offset-limit` mechanism;
+- ✓ While Infinite Mode: bind `offset-limit` mechanism to the `(onLazyLoad)` output 
+(
+  `first` and `rows` fields from onLazyLoad output mean `offset` and `pageSize`(that is actually `limit`)
+)
+
+- ~~Remove `sumChunk`, since it's not already needed,~~ <br/>
+~~since we bound `offset-limit` mechanism to the `(onLazyLoad)` output~~ (NO, keep it, `sumChunk` is actually needed for infinite scroll)
+
+- Check if there is no bugs
+- Fix this: Infinite Scroll still not working, even after the changes
+
+✓ rename `keepPage` on `keepOffset`
+
+... Move from usual variables to Signals
+  - ✓ users-table component
+  - ✓ custom-paginator component
+  - ✓ infinite-scroll-toggler
+
+- Fix infinite-mode table glitches on scroll up and on filters-reset
+
+- Fix infinite-mode data-doubling when scroll down:
+  - load page, set sorting by full-name
+  - switch to infinite-mode
+  - search by email (209 total results will appear)
+  - scroll down untill the next `loading` state (not when virtual-scroll triggers but actually when onLazyLoad triggers)
+  - new data rows appeared (or you can call it as new data chunk) 
+  - scroll up, than sroll down again
+  - new data chunk loaded again
+  - What we can see (the bug) after new data chunk rendered:
+  - 1) The sorting is by full-name in ascending order (from A to Z)
+  - 2) After the user-name that starts with "B" we can see the next row that starts with letter "A"
+  - 3) that means we loaded the wrong data chunk, offset somehow was reset to 0
+  - 4) it seems it started loading data chunks from start
+
+
+- Make table header fixed on top when infinite-mode, (it already works well in usual classic pagination mode)
+  now it has fixed to top position untill we scroll down untill next data chunk loaded
+
+
+## Part 3.1
 
 Create components structure: page component > view component > feature component > component.
 
@@ -125,13 +165,11 @@ Create NGRX Store and setup store interactions between filters-bar and data-tabl
 
 Wrap table with ngx-scrollbar lib to add perfect scrollbar in ui;
 
-Move from usual variables to signals
-
 Add Reactive Forms to name and email inputs
 
 
 
-## Part 3.1
+## Part 3.2
 
 Disable Reset filters button if no filters applied
 
@@ -139,7 +177,9 @@ Add tooltips to header cells and to content cells,
 so a user can see the whole text,
 when some text is minimized with `...` on smaller screen sizes
 
-Separate clear input button (x) for every filter or input in filter bar
+
+Add Reset button for every select-dropdown in filters bar  a separate clear input button (x) for every filter or input in filter bar
+
 
 Replace sort by firstName on fullName
 sorting must be working by firstName and lastName when pass fullName as sort field

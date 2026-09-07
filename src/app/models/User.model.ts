@@ -35,15 +35,17 @@ export type UserSortField =
   'firstName' | 'email' | 'salaryMonthly' | 'age' ;
 
 export interface UserListFilters {
-  fullNameQuery: string;
-  emailQuery: string;
-  page: number;
-  pageSize: number;
+  offset: number; // start index
+  limit: number; // page size, how many items per page
+
   sortField: UserSortField | null;
   sortDirection: SortDirection;
 
-  positionQuery: string;
-  levelQuery: string;
-  techQuery: string;
-  employmentTypeQuery: string;
+  fullNameQuery: string;
+  emailQuery: string;
+
+  positionQuery: string; // position id
+  levelQuery: string; // level id
+  techQuery: string; // tech skill id
+  employmentTypeQuery: string; // employment type id
 }

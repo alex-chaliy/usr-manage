@@ -67,19 +67,18 @@ export class UserService {
       users = this.sortBy(users, filters.sortField, filters.sortDirection || 'asc');
     }
 
-    return of(this.slicePage(users, filters.page, filters.pageSize));
+    return of(this.slicePage(users, filters.offset, filters.limit));
   }
 
   private slicePage(
     userList: UserAggrageted[],
-    page: number,
+    offset: number,
     pageSize: number,
   ): ApiResponse<UserAggrageted[]> {
-    const startIndex = (page - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
+    const endIndex = offset + pageSize;
     return {
-      data: userList.slice(startIndex, endIndex),
-      offset: startIndex,
+      data: userList.slice(offset, endIndex),
+      offset: offset,
       limit: pageSize,
       total: userList.length,
     };

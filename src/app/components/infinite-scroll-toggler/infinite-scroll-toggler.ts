@@ -1,6 +1,6 @@
 import { ToggleSwitchModule } from 'primeng/toggleswitch';
 
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -10,11 +10,10 @@ import { FormsModule } from '@angular/forms';
   styleUrl: './infinite-scroll-toggler.scss',
 })
 export class InfiniteScrollToggler {
-  @Input() isInfinite = false;
-  @Output() isInfiniteChange = new EventEmitter<boolean>();
+  isInfinite = input<boolean>(false);
+  isInfiniteChange = output<boolean>();
 
   onValueChange(isInfinite: boolean) {
-    this.isInfinite = isInfinite;
-    this.isInfiniteChange.emit(this.isInfinite);
+    this.isInfiniteChange.emit(isInfinite);
   }
 }
