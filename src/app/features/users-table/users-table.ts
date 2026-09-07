@@ -65,7 +65,8 @@ export class UsersTable implements OnInit {
     // newly loaded items are appended to the DOM without removing previously rendered items
     // helps to fix virtual-scroll bug where
     // the height/range calculation glitches and causes jumpy scrolling or blank rows
-    // appendOnly: true,
+    appendOnly: true, // fixed the bug with glitching, but only when scroll up
+    // still issuing the bug with glitching when scroll down to load a new data chunk
 
     // numToleratedItems: 10, // rows tolerated outside viewport before triggering load
 
@@ -351,7 +352,7 @@ export class UsersTable implements OnInit {
     // TODO remive log
     // console.log('loadChunk :  loadEvent: ', loadEvent);
 
-    this.offset.set(loadEvent?.first ?? this.usersData().length);
+    this.offset.set(this.usersData().length);
 
     this.getFilteredUsers({
       keepOffset: true,

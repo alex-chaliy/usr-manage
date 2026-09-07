@@ -129,8 +129,10 @@ Some spec desription is already provided above `getFilteredUsers` method, change
   - ✓ infinite-scroll-toggler
 
 - Fix infinite-mode table glitches on scroll up and on filters-reset
+  - ✓ fixed the bug with glitching, but only when scroll up, by adding `appendOnly: true` to `scrollOptions` config (options for prime-ng virtual-croller in prime-ng table)
+  - still issuing the bug with glitching when scroll down to load a new data chunk
 
-- Fix infinite-mode data-doubling when scroll down:
+✓ [bug 2]: Fix infinite-mode data-doubling when scroll down:
   - load page, set sorting by full-name
   - switch to infinite-mode
   - search by email (209 total results will appear)
@@ -143,6 +145,16 @@ Some spec desription is already provided above `getFilteredUsers` method, change
   - 2) After the user-name that starts with "B" we can see the next row that starts with letter "A"
   - 3) that means we loaded the wrong data chunk, offset somehow was reset to 0
   - 4) it seems it started loading data chunks from start
+
+Fixed by replacing
+```
+this.offset.set(loadEvent?.first ?? this.usersData().length);
+```
+to
+```
+this.offset.set(this.usersData().length);
+```
+that provides prover offset syncronization
 
 
 - Make table header fixed on top when infinite-mode, (it already works well in usual classic pagination mode)
